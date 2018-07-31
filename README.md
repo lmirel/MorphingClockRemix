@@ -7,7 +7,7 @@
  * - Morphing clock logic is kept almost as is from https://github.com/hwiguna/HariFun_166_Morphing_Clock
  * - WiFiManager logic is also from https://github.com/hwiguna/HariFun_166_Morphing_Clock
  * - it uses TinyFont and TinyIcons as my own implementation
- * - it uses openweathermap.org so you'll need a free account for the weather data
+ * - it uses openweathermap.org so you'll need a free account for the weather data (sync every 5min or so)
  *  !! you'll need to update the apiKey and location variables (around line 300)
  * - it uses animated icons for weather sunny, cloudy, rainy, thunders, snow, etc.. (not all tested yet)
  * 
