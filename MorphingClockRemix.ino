@@ -297,7 +297,7 @@ void setup()
 //open weather map api key 
 String apiKey = "API_KEY"; //e.g a hex string like "abcdef0123456789abcdef0123456789"
 //the city you want the weather for 
-String location= "Muenchen,DE"; //e.g. "Paris,FR"
+String location= "Paris,FR"; //e.g. "Paris,FR"
 char server[] = "api.openweathermap.org";
 WiFiClient client;
 int tempM = -10000;
