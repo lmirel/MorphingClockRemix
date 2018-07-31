@@ -8,7 +8,7 @@
  * - WiFiManager logic is also from https://github.com/hwiguna/HariFun_166_Morphing_Clock
  * - it uses TinyFont and TinyIcons as my own implementation
  * - it uses openweathermap.org so you'll need a free account for the weather data
- *  !! you'll need to update the apiKey and location variables below (around line 300)
+ *  !! you'll need to update the apiKey and location variables (around line 300)
  * - it uses animated icons for weather sunny, cloudy, rainy, thunders, snow, etc.. (not all tested yet)
  * 
  * tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
