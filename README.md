@@ -10,7 +10,8 @@
  * - it uses openweathermap.org so you'll need a free account for the weather data (sync every 5min or so)
  *  !! you'll need to update the apiKey and location variables (around line 300)
  * - it uses animated icons for weather sunny, cloudy, rainy, thunders, snow, etc.. (not all tested yet)
- * 
+ * - it has night mode from 8pm to 8am when it only shows a moon and 2 twinkling stars and a dimmed display
+ *
  * tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
  * 
  * provided 'AS IS' use at your own risk
