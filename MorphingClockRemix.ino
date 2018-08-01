@@ -68,7 +68,7 @@ Digit digit5(&display, 0, 63 - 7 - 9*6, 8, display.color565(0, 0, 255));
 
 #ifdef ESP8266
 // ISR for display refresh
-void display_updater()
+void display_updater ()
 {
   //display.displayTestPattern(70);
   display.display(70);
@@ -89,8 +89,9 @@ void configModeCallback (WiFiManager *myWiFiManager)
   drd.stop();
 }
 
-char timezone[5] = "";
-char military[3] = ""; // 24 hour mode? Y/N
+char timezone[5] = "0";
+char military[3] = "Y";  // 24 hour mode? Y/N
+char u_metric[3] = "Y";  // use metric for units? Y/N
 bool loadConfig() 
 {
   File configFile = SPIFFS.open("/config.json", "r");
@@ -121,8 +122,16 @@ bool loadConfig()
     return false;
   }
 
-  strcpy(timezone, json["timezone"]);
-  strcpy(military, json["military"]);
+  strcpy (timezone, json["timezone"]);
+  strcpy (military, json["military"]);
+  //avoid reboot loop on systems where this is not set
+  if (json.get<const char*>("metric"))
+    strcpy (u_metric, json["metric"]);
+  else
+  {
+    Serial.println ("metric units not set, using default: Y");
+  }
+  
   return true;
 }
 
@@ -132,20 +141,24 @@ bool saveConfig()
   JsonObject& json = jsonBuffer.createObject();
   json["timezone"] = timezone;
   json["military"] = military;
+  json["metric"] = u_metric;
 
-  File configFile = SPIFFS.open("/config.json", "w");
-  if (!configFile) {
-    Serial.println("Failed to open config file for writing");
+  File configFile = SPIFFS.open ("/config.json", "w");
+  if (!configFile)
+  {
+    Serial.println ("Failed to open config file for writing");
     return false;
   }
 
-  Serial.print("timezone=");
-  Serial.println(timezone);
+  Serial.println ("Saving configuration to file:");
+  Serial.print ("timezone=");
+  Serial.println (timezone);
+  Serial.print ("military=");
+  Serial.println (military);
+  Serial.print ("metric=");
+  Serial.println (u_metric);
 
-  Serial.print("military=");
-  Serial.println(military);
-
-  json.printTo(configFile);
+  json.printTo (configFile);
   return true;
 }
 
@@ -173,8 +186,10 @@ void wifi_setup ()
   wifiManager.setSaveConfigCallback (saveConfigCallback);
   WiFiManagerParameter timeZoneParameter ("timeZone", "Time Zone", timezone, 5); 
   wifiManager.addParameter (&timeZoneParameter);
-  WiFiManagerParameter militaryParameter ("military", "24Hr", military, 3); 
+  WiFiManagerParameter militaryParameter ("military", "24Hr (Y/N)", military, 3); 
   wifiManager.addParameter (&militaryParameter);
+  WiFiManagerParameter metricParameter ("metric", "Metric Units (Y/N)", u_metric, 3); 
+  wifiManager.addParameter (&metricParameter);
 
   //-- Double-Reset --
   if (drd.detectDoubleReset ()) 
@@ -216,11 +231,19 @@ void wifi_setup ()
   TFDrawText (&display, String("   ONLINE   "), 1, 13, display.color565(0, 0, 255));
   Serial.print ("WiFi connected, IP address: ");
   Serial.println (WiFi.localIP ());
+  //
+  Serial.print ("timezone=");
+  Serial.println (timezone);
+  Serial.print ("military=");
+  Serial.println (military);
+  Serial.print ("metric=");
+  Serial.println (u_metric);
   //-- Timezone --
   strcpy (timezone, timeZoneParameter.getValue ());
-  
   //-- Military --
-  strcpy (military,militaryParameter.getValue ());
+  strcpy (military, militaryParameter.getValue ());
+  //-- Military --
+  strcpy (u_metric, metricParameter.getValue ());
   //start NTP
   NTP.begin ("pool.ntp.org", String(timezone).toInt(), false);
   NTP.setInterval (10);//force rapid sync in 10sec
@@ -283,10 +306,10 @@ void setup()
 }
 
 //open weather map api key 
-String apiKey = "API_KEY"; //e.g a hex string like "abcdef0123456789abcdef0123456789"
+String apiKey   = "API_KEY"; //e.g a hex string like "abcdef0123456789abcdef0123456789"
 //the city you want the weather for 
-String location= "Paris,FR"; //e.g. "Paris,FR"
-char server[] = "api.openweathermap.org";
+String location = "Paris,FR"; //e.g. "Paris,FR"
+char server[]   = "api.openweathermap.org";
 WiFiClient client;
 int tempM = -10000;
 int presM = -10000;
@@ -304,7 +327,7 @@ void getWeather ()
     client.print("q="+location); 
     client.print("&appid="+apiKey); 
     client.print("&cnt=3"); 
-    client.println("&units=metric"); 
+    (*u_metric=='Y')?client.println("&units=metric"):client.println("&units=imperial");
     client.println("Host: api.openweathermap.org"); 
     client.println("Connection: close"); 
     client.println(); 
@@ -313,7 +336,7 @@ void getWeather ()
   { 
     Serial.println("unable to connect."); 
   } 
-  delay(1000); 
+  delay (1000);
   String line = "";
   String sval = "";
   int bT, bT2;
@@ -674,14 +697,30 @@ void draw_weather ()
     //weather below the clock
     //-temperature
     int lcc = cc_red;
-    if (tempM < 26)
-      lcc = cc_grn;
-    if (tempM < 18)
-      lcc = cc_blu;
-    if (tempM < 6)
-      lcc = cc_wht;
+    if (*u_metric == 'Y')
+    {
+      //C
+      if (tempM < 26)
+        lcc = cc_grn;
+      if (tempM < 18)
+        lcc = cc_blu;
+      if (tempM < 6)
+        lcc = cc_wht;
+    }
+    else
+    {
+      //F
+      if (tempM < 79)
+        lcc = cc_grn;
+      if (tempM < 64)
+        lcc = cc_blu;
+      if (tempM < 43)
+        lcc = cc_wht;
+    }
     //
-    String lstr = String (tempM) + "C";
+    String lstr = String (tempM) + String((*u_metric=='Y')?"C":"F");
+    Serial.print ("temperature: ");
+    Serial.println (lstr);
     TFDrawText (&display, lstr, xo, yo, lcc);
     //xo  = 1; TFDrawChar (&display, '0' + tempM/10, xo, yo, cc_red);
     //xo += 5; TFDrawChar (&display, '0' + tempM%10, xo, yo, cc_red);
