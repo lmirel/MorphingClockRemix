@@ -3,7 +3,7 @@ Remix from HarryFun's great Morphing Digital Clock idea https://www.instructable
 Follow the great tutorial there and eventually use this code as alternative.
  
 - main code is based on the NTPClient lib example for ESP, the lib itself is used as is for NTP sync https://github.com/2dom/NtpClient
-- use fast NTP sync then adapt to one sync per day (or so)
+- use fast NTP sync on start then adapt to one sync per day (or so)
 - Morphing clock code/logic is kept almost as is from https://github.com/hwiguna/HariFun_166_Morphing_Clock
 - WiFiManager code/logic is also from https://github.com/hwiguna/HariFun_166_Morphing_Clock
 - it uses TinyFont and TinyIcons as my own implementation
