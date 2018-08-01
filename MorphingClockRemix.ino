@@ -217,7 +217,7 @@ void wifi_setup ()
 
     //display.setCursor (2, row1);
     //display.print ("connecting");
-    TFDrawText (&display, String(" CONNECTING "), 1, 13, display.color565(0, 0, 255));
+    TFDrawText (&display, String("   CONNECTING   "), 0, 13, display.color565(0, 0, 255));
 
     //fetches ssid and pass from eeprom and tries to connect
     //if it does not connect it starts an access point with the specified name wifiManagerAPName
@@ -228,7 +228,7 @@ void wifi_setup ()
   //-- Status --
   //display.fillScreen (0);
   //display.setCursor (2, row1);
-  TFDrawText (&display, String("   ONLINE   "), 1, 13, display.color565(0, 0, 255));
+  TFDrawText (&display, String("     ONLINE     "), 0, 13, display.color565(0, 0, 255));
   Serial.print ("WiFi connected, IP address: ");
   Serial.println (WiFi.localIP ());
   //
@@ -639,7 +639,7 @@ void draw_weather_conditions ()
   //0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
   Serial.print ("weather conditions ");
   Serial.println (condM);
-  xo = 17;
+  xo = 4*TF_COLS;
   switch (condM)
   {
     case 0://unk
@@ -687,13 +687,11 @@ void draw_weather ()
   xo = 1; yo = 1;
   if (tempM == -10000 || humiM == -10000 || presM == -10000)
   {
-    TFDrawText (&display, String(" NO WEATHER "), xo, yo, cc_dgr);
+    TFDrawText (&display, String("   NO WEATHER"), xo, yo, cc_dgr);
     Serial.println ("!no weather data available");
   }
   else
   {
-    //for (int i = 0 ; i < 12; i++)
-      //TFDrawChar (&display, '0' + i%10, xo + i * 5, yo, display.color565 (0, 255, 0));
     //weather below the clock
     //-temperature
     int lcc = cc_red;
@@ -722,9 +720,6 @@ void draw_weather ()
     Serial.print ("temperature: ");
     Serial.println (lstr);
     TFDrawText (&display, lstr, xo, yo, lcc);
-    //xo  = 1; TFDrawChar (&display, '0' + tempM/10, xo, yo, cc_red);
-    //xo += 5; TFDrawChar (&display, '0' + tempM%10, xo, yo, cc_red);
-    //xo += 5; TFDrawChar (&display, 'C', xo, yo, cc_red);
     //-humidity
     lcc = cc_red;
     if (humiM < 65)
@@ -734,26 +729,12 @@ void draw_weather ()
     if (humiM < 15)
       lcc = cc_wht;
     lstr = String (humiM) + "%";
-    xo = 26; yo = 1;
+    xo = 7*TF_COLS; yo = 1;
     TFDrawText (&display, lstr, xo, yo, lcc);
-    //xo += 5; TFDrawChar (&display, '0' + humiM/10, xo, yo, cc_ylw);
-    //xo += 5; TFDrawChar (&display, '0' + humiM%10, xo, yo, cc_ylw);
-    //xo += 5; TFDrawChar (&display, '%', xo, yo, cc_ylw);
     //-pressure
     lstr = String (presM);
-    xo = 40; yo = 1;
+    xo = 10*TF_COLS; yo = 1;
     TFDrawText (&display, lstr, xo, yo, cc_blu);
-    //int num = presM;
-    //xo += 25;
-    //while (num != 0)
-    //{
-    //    int rem = num % 10;
-    //    xo -= 5; TFDrawChar (&display, '0' + rem, xo, yo, cc_blu);
-    //    num /= 10;
-    //}
-    //text test
-    //xo = 1; yo = 1;
-    //TFDrawText (&display, "LOVEhYOU,BOO", xo, yo, cc_red);
     //
     draw_weather_conditions ();
   }
@@ -791,31 +772,15 @@ void draw_date ()
   String lstr = (day(tnow) < 10 ? "0" + String(day(tnow)) : String(day(tnow))) + "." + 
                 (month(tnow) < 10 ? "0" + String(month(tnow)) : String(month(tnow))) + "." + 
                 String(year(tnow));
-  xo = 5; yo = 26;
+  xo = 3*TF_COLS; yo = 26;
   TFDrawText (&display, lstr, xo, yo, cc_grn);
-  #if 0
-  xo  = 5; TFDrawChar (&display, '0' + day(now())/10, xo, yo, cc_grn);
-  xo += 5; TFDrawChar (&display, '0' + day(now())%10, xo, yo, cc_grn);
-  xo += 5; TFDrawChar (&display, '.', xo, yo, cc_grn);
-  xo += 5; TFDrawChar (&display, '0' + month(now())/10, xo, yo, cc_grn);
-  xo += 5; TFDrawChar (&display, '0' + month(now())%10, xo, yo, cc_grn);
-  xo += 5; TFDrawChar (&display, '.', xo, yo, cc_grn);
-  int num = year(now());
-  xo += 25;
-  while (num != 0)
-  {
-    int rem = num % 10;
-    xo -= 5; TFDrawChar (&display, '0' + rem, xo, yo, cc_grn);
-    num /= 10;
-  }
-  #endif
   //
 }
 
 void draw_animations (int stp)
 {
   //weather icon animation
-  int xo = 17; 
+  int xo = 4*TF_COLS; 
   int yo = 1;
   //0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
   if (use_ani)

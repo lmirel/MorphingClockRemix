@@ -9,10 +9,11 @@
 #include <Arduino.h>
 #include <PxMatrix.h> // https://github.com/2dom/PxMatrix
 
-#define TF_SIZE 5
+#define TF_COLS 4
+#define TF_ROWS 5
 typedef struct TFFace 
 {
-  char fface[TF_SIZE]; //5 cols x 5 rows
+  char fface[TF_ROWS]; //4 cols x 5 rows
 };
 /*
  * example:

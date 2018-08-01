@@ -5,7 +5,7 @@
  */
 #include "TinyFont.h"
 /*
- * we want to draw with pixels on an area of 5 cols and 5 rows like:
+ * we want to draw with pixels on an area of 4 cols and 5 rows like:
  *  spc    1     2     3     4
  * ..... ...*. .***. .***. .*.*.
  * ..... ...*. ...*. ...*. .*.*.
@@ -552,22 +552,22 @@ TFFace tinyFont[] =
   {
     //pixels
     {
-      0b00010001,
-      0b00011011,
-      0b00010101,
-      0b00010001,
-      0b00010001,
+      0b00001110,
+      0b00001110,
+      0b00001010,
+      0b00001010,
+      0b00001010,
     },
   },
   //N
   {
     //pixels
     {
-      0b00010010,
-      0b00011010,
-      0b00010110,
-      0b00010010,
-      0b00010010,
+      0b00001010,
+      0b00001110,
+      0b00001010,
+      0b00001010,
+      0b00001010,
     },
   },
   //O
@@ -662,11 +662,11 @@ TFFace tinyFont[] =
   {
     //pixels
     {
-      0b00010001,
-      0b00010001,
-      0b00010101,
-      0b00010101,
-      0b00011011,
+      0b00001010,
+      0b00001010,
+      0b00001010,
+      0b00001110,
+      0b00001110,
     },
   },
   //X
@@ -863,9 +863,9 @@ const int cfblack = 0;
 void TFDrawChar (PxMATRIX* d, char value, char xo, char yo, int col)
 {
   int i, j, cfi = value - ' ';
-  for (i = 0; i < TF_SIZE; i++)
+  for (i = 0; i < TF_ROWS; i++)
   {
-    for (j = 0; j < TF_SIZE; j++)
+    for (j = 0; j < TF_COLS; j++)
     {
       if (tinyFont[cfi].fface[i] & (1 << j))
         d->drawPixel (xo + 5 - j, yo + i, col);
@@ -875,13 +875,13 @@ void TFDrawChar (PxMATRIX* d, char value, char xo, char yo, int col)
   }
 }
 
-#define TFLINE_LEN  12
+#define TFLINE_LEN  (64 / TF_COLS)
 void TFDrawText (PxMATRIX* d, String text, char xo, char yo, int col)
 {
   unsigned char lbuf[TFLINE_LEN+1] = {0};
   unsigned char *lptr = lbuf;
   text.getBytes (lbuf, TFLINE_LEN);
-  for (; *lptr; lptr++, xo += TF_SIZE)
+  for (; *lptr; lptr++, xo += TF_COLS)
   {
     TFDrawChar (d, *lptr, xo, yo, col);
   }
