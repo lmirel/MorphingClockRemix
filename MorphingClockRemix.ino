@@ -1,20 +1,18 @@
 /*
- * Remix from HarryFun's great MorphingClock idea https://www.instructables.com/id/Morphing-Digital-Clock/
- * Follow the great tutorial there and eventually use this code as alternative.
- * 
- * - main code is based on the NTP lib example for ESP, the lib itself is used as is for NTP sync;
- * - use fast NTP sync then adapt to one sync per day (or so)
- * - Morphing clock logic is kept almost as is from https://github.com/hwiguna/HariFun_166_Morphing_Clock
- * - WiFiManager logic is also from https://github.com/hwiguna/HariFun_166_Morphing_Clock
- * - it uses TinyFont and TinyIcons as my own implementation
- * - it uses openweathermap.org so you'll need a free account for the weather data
- *  !! you'll need to update the apiKey and location variables below (around line 300)
- * - it uses animated icons for weather sunny, cloudy, rainy, thunders, snow, etc.. (not all tested yet)
- * 
- * tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
- * 
- * provided 'AS IS' use at your own risk
- * 
+Remix from HarryFun's great Morphing Digital Clock idea https://www.instructables.com/id/Morphing-Digital-Clock/ Follow the great tutorial there and eventually use this code as alternative.
+
+- main code is based on the NTPClient lib example for ESP, the lib itself is used as is for NTP sync https://github.com/2dom/NtpClient
+- use fast NTP sync then adapt to one sync per day (or so)
+- Morphing clock code/logic is kept almost as is from https://github.com/hwiguna/HariFun_166_Morphing_Clock
+- WiFiManager code/logic is also from https://github.com/hwiguna/HariFun_166_Morphing_Clock
+- it uses TinyFont and TinyIcons as my own implementation
+- it uses openweathermap.org so you'll need a free account for the weather data (sync every 5min or so) !! you'll need to update the apiKey and location variables (around line 300)
+- it uses animated icons for weather: sunny, cloudy, rainy, thunders, snow, etc.. (not all tested yet)
+- it has night mode from 8pm to 8am when it only shows a moon and 2 twinkling stars and a dimmed display
+- temperature and humidity change color based on (what most might consider) comfortable values
+- tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
+
+provided 'AS IS', use at your own risk
  * mirel.t.lazar@gmail.com
  */
 
@@ -387,7 +385,7 @@ void getWeather ()
     {
       bT2 = line.indexOf (",\"", bT + 11);
       sval = line.substring (bT + 11, bT2);
-      Serial.print ("press ");
+      Serial.print ("humi ");
       Serial.println (sval);
       humiM = sval.toInt();
     }
@@ -673,55 +671,63 @@ void draw_weather ()
   int cc_gry = display.color565 (128, 128, 128);
   int cc_dgr = display.color565 (65, 65, 65);
   Serial.println ("Showing the weather");
-  //for (int i = 0 ; i < 12; i++)
-    //TFDrawChar (&display, '0' + i%10, xo + i * 5, yo, display.color565 (0, 255, 0));
-  //weather below the clock
-  //-temperature
-  int lcc = cc_red;
-  if (tempM < 26)
-    lcc = cc_grn;
-  if (tempM < 18)
-    lcc = cc_blu;
-  if (tempM < 6)
-    lcc = cc_wht;
-  //
-  String lstr = String (tempM) + "C";
   xo = 1; yo = 1;
-  TFDrawText (&display, lstr, xo, yo, lcc);
-  //xo  = 1; TFDrawChar (&display, '0' + tempM/10, xo, yo, cc_red);
-  //xo += 5; TFDrawChar (&display, '0' + tempM%10, xo, yo, cc_red);
-  //xo += 5; TFDrawChar (&display, 'C', xo, yo, cc_red);
-  //-humidity
-  lcc = cc_red;
-  if (humiM < 65)
-    lcc = cc_grn;
-  if (humiM < 35)
-    lcc = cc_blu;
-  if (humiM < 15)
-    lcc = cc_wht;
-  lstr = String (humiM) + "%";
-  xo = 26; yo = 1;
-  TFDrawText (&display, lstr, xo, yo, lcc);
-  //xo += 5; TFDrawChar (&display, '0' + humiM/10, xo, yo, cc_ylw);
-  //xo += 5; TFDrawChar (&display, '0' + humiM%10, xo, yo, cc_ylw);
-  //xo += 5; TFDrawChar (&display, '%', xo, yo, cc_ylw);
-  //-pressure
-  lstr = String (presM);
-  xo = 40; yo = 1;
-  TFDrawText (&display, lstr, xo, yo, cc_blu);
-  //int num = presM;
-  //xo += 25;
-  //while (num != 0)
-  //{
-  //    int rem = num % 10;
-  //    xo -= 5; TFDrawChar (&display, '0' + rem, xo, yo, cc_blu);
-  //    num /= 10;
-  //}
-  //text test
-  //xo = 1; yo = 1;
-  //TFDrawText (&display, "LOVEhYOU,BOO", xo, yo, cc_red);
-  //
-  draw_weather_conditions ();
+  if (tempM == -10000 || humiM == -10000 || presM == -10000)
+  {
+    TFDrawText (&display, String(" NO WEATHER "), xo, yo, cc_dgr);
+    Serial.println ("!no weather data available");
+  }
+  else
+  {
+    //for (int i = 0 ; i < 12; i++)
+      //TFDrawChar (&display, '0' + i%10, xo + i * 5, yo, display.color565 (0, 255, 0));
+    //weather below the clock
+    //-temperature
+    int lcc = cc_red;
+    if (tempM < 26)
+      lcc = cc_grn;
+    if (tempM < 18)
+      lcc = cc_blu;
+    if (tempM < 6)
+      lcc = cc_wht;
+    //
+    String lstr = String (tempM) + "C";
+    TFDrawText (&display, lstr, xo, yo, lcc);
+    //xo  = 1; TFDrawChar (&display, '0' + tempM/10, xo, yo, cc_red);
+    //xo += 5; TFDrawChar (&display, '0' + tempM%10, xo, yo, cc_red);
+    //xo += 5; TFDrawChar (&display, 'C', xo, yo, cc_red);
+    //-humidity
+    lcc = cc_red;
+    if (humiM < 65)
+      lcc = cc_grn;
+    if (humiM < 35)
+      lcc = cc_blu;
+    if (humiM < 15)
+      lcc = cc_wht;
+    lstr = String (humiM) + "%";
+    xo = 26; yo = 1;
+    TFDrawText (&display, lstr, xo, yo, lcc);
+    //xo += 5; TFDrawChar (&display, '0' + humiM/10, xo, yo, cc_ylw);
+    //xo += 5; TFDrawChar (&display, '0' + humiM%10, xo, yo, cc_ylw);
+    //xo += 5; TFDrawChar (&display, '%', xo, yo, cc_ylw);
+    //-pressure
+    lstr = String (presM);
+    xo = 40; yo = 1;
+    TFDrawText (&display, lstr, xo, yo, cc_blu);
+    //int num = presM;
+    //xo += 25;
+    //while (num != 0)
+    //{
+    //    int rem = num % 10;
+    //    xo -= 5; TFDrawChar (&display, '0' + rem, xo, yo, cc_blu);
+    //    num /= 10;
+    //}
+    //text test
+    //xo = 1; yo = 1;
+    //TFDrawText (&display, "LOVEhYOU,BOO", xo, yo, cc_red);
+    //
+    draw_weather_conditions ();
+  }
 }
 
 void draw_love ()
