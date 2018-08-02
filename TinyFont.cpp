@@ -552,7 +552,7 @@ TFFace tinyFont[] =
   {
     //pixels
     {
-      0b00001110,
+      0b00001010,
       0b00001110,
       0b00001010,
       0b00001010,
@@ -563,8 +563,8 @@ TFFace tinyFont[] =
   {
     //pixels
     {
-      0b00001010,
       0b00001110,
+      0b00001010,
       0b00001010,
       0b00001010,
       0b00001010,
@@ -666,7 +666,7 @@ TFFace tinyFont[] =
       0b00001010,
       0b00001010,
       0b00001110,
-      0b00001110,
+      0b00001010,
     },
   },
   //X
@@ -868,9 +868,9 @@ void TFDrawChar (PxMATRIX* d, char value, char xo, char yo, int col)
     for (j = 0; j < TF_COLS; j++)
     {
       if (tinyFont[cfi].fface[i] & (1 << j))
-        d->drawPixel (xo + 5 - j, yo + i, col);
+        d->drawPixel (xo + TF_COLS - j, yo + i, col);
       else
-        d->drawPixel (xo + 5 - j, yo + i, cfblack);
+        d->drawPixel (xo + TF_COLS - j, yo + i, cfblack);
     }
   }
 }

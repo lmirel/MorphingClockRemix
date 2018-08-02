@@ -306,7 +306,7 @@ void setup()
 }
 
 //open weather map api key 
-String apiKey   = "API_KEY"; //e.g a hex string like "abcdef0123456789abcdef0123456789"
+String apiKey   = ""; //e.g a hex string like "abcdef0123456789abcdef0123456789"
 //the city you want the weather for 
 String location = "Paris,FR"; //e.g. "Paris,FR"
 char server[]   = "api.openweathermap.org";
@@ -317,24 +317,30 @@ int humiM = -10000;
 int condM = 0;  //0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
 void getWeather ()
 {
-  Serial.print("Connecting to weather server.. "); 
+  if (!apiKey.length ())
+  {
+    Serial.println ("!missing API KEY for weather data, skipping"); 
+    return;
+  }
+  Serial.print ("connecting to weather server.. "); 
   // if you get a connection, report back via serial: 
-  if (client.connect(server, 80)) 
+  if (client.connect (server, 80)) 
   { 
-    Serial.println("connected."); 
+    Serial.println ("connected."); 
     // Make a HTTP request: 
-    client.print("GET /data/2.5/weather?"); 
-    client.print("q="+location); 
-    client.print("&appid="+apiKey); 
-    client.print("&cnt=3"); 
-    (*u_metric=='Y')?client.println("&units=metric"):client.println("&units=imperial");
-    client.println("Host: api.openweathermap.org"); 
-    client.println("Connection: close"); 
-    client.println(); 
+    client.print ("GET /data/2.5/weather?"); 
+    client.print ("q="+location); 
+    client.print ("&appid="+apiKey); 
+    client.print ("&cnt=3"); 
+    (*u_metric=='Y')?client.println ("&units=metric"):client.println ("&units=imperial");
+    client.println ("Host: api.openweathermap.org"); 
+    client.println ("Connection: close"); 
+    client.println (); 
   } 
   else 
   { 
-    Serial.println("unable to connect."); 
+    Serial.println ("!unable to connect");
+    return;
   } 
   delay (1000);
   String line = "";
@@ -682,12 +688,12 @@ void draw_weather ()
   int cc_blu = display.color565 (0, 0, cin);
   int cc_ylw = display.color565 (cin, cin, 0);
   int cc_gry = display.color565 (128, 128, 128);
-  int cc_dgr = display.color565 (65, 65, 65);
-  Serial.println ("Showing the weather");
+  int cc_dgr = display.color565 (30, 30, 30);
+  Serial.println ("showing the weather");
   xo = 1; yo = 1;
   if (tempM == -10000 || humiM == -10000 || presM == -10000)
   {
-    TFDrawText (&display, String("   NO WEATHER"), xo, yo, cc_dgr);
+    //TFDrawText (&display, String("NO WEATHER DATA"), xo, yo, cc_dgr);
     Serial.println ("!no weather data available");
   }
   else
@@ -742,7 +748,7 @@ void draw_weather ()
 
 void draw_love ()
 {
-  Serial.println ("Showing some love");
+  Serial.println ("showing some love");
   use_ani = 0;
   //love*you,boo
   yo = 1;
@@ -764,7 +770,7 @@ void draw_love ()
 void draw_date ()
 {
   int cc_grn = display.color565 (0, cin, 0);
-  Serial.println ("Showing the date");
+  Serial.println ("showing the date");
   //for (int i = 0 ; i < 12; i++)
     //TFDrawChar (&display, '0' + i%10, xo + i * 5, yo, display.color565 (0, 255, 0));
   //date below the clock
@@ -840,16 +846,6 @@ void loop()
   {
     //Serial.println(millis() - last);
     last = cm;
-    #if 0
-    Serial.print(i); Serial.print(" ");
-    Serial.print(NTP.getTimeDateString()); Serial.print(" ");
-    Serial.print(NTP.isSummerTime() ? "Summer Time. " : "Winter Time. ");
-    Serial.print("WiFi is ");
-    Serial.print(WiFi.isConnected() ? "connected" : "not connected"); Serial.print(". ");
-    Serial.print("Uptime: ");
-    Serial.print(NTP.getUptimeString()); Serial.print(" since ");
-    Serial.println(NTP.getTimeDateString(NTP.getFirstSync()).c_str());
-    #endif
     i++;
     //
     draw_animations (i);
@@ -857,10 +853,6 @@ void loop()
   }
   //time changes every miliseconds, we only want to draw when digits actually change.
   hh = NTP.getHour ();
-  //military time?
-  if (hh > 12 && military[0] == 'N')
-    hh -= 12;
-  //
   mm = NTP.getMinute ();
   ss = NTP.getSecond ();
   //
@@ -875,20 +867,20 @@ void loop()
     if (hh >= 20 && cin == 150)
     {
       cin = 25;
-      Serial.println ("Night mode brightness");
+      Serial.println ("night mode brightness");
       daytime = 0;
     }
     if (hh < 8 && cin == 150)
     {
       cin = 25;
-      Serial.println ("Night mode brightness");
+      Serial.println ("night mode brightness");
       daytime = 0;
     }
     //during the day, bright
     if (hh >= 8 && hh < 20 && cin == 25)
     {
       cin = 150;
-      Serial.println ("Day mode brightness");
+      Serial.println ("day mode brightness");
       daytime = 1;
     }
     //we had a sync so draw without morphing
@@ -903,10 +895,17 @@ void loop()
     digit3.SetColor (cc_blu);
     digit4.SetColor (cc_blu);
     digit5.SetColor (cc_blu);
-    //
+    //clear screen
     display.fillScreen (0);
+    //date and weather
+    draw_weather ();
+    draw_date ();
+    //
     digit1.DrawColon (cc_blu);
     digit3.DrawColon (cc_blu);
+    //military time?
+    if (hh > 12 && military[0] == 'N')
+      hh -= 12;
     //
     digit0.Draw (ss % 10);
     digit1.Draw (ss / 10);
@@ -914,13 +913,10 @@ void loop()
     digit3.Draw (mm / 10);
     digit4.Draw (hh % 10);
     digit5.Draw (hh / 10);
-    //
-    draw_weather ();
-    draw_date ();
   }
   else
   {
-    //
+    //seconds
     if (ss != prevss) 
     {
       int s0 = ss % 10;
@@ -933,7 +929,7 @@ void loop()
       if (ss == 30 && ((mm % 5) == 0))
         getWeather ();
     }
-  
+    //minutes
     if (mm != prevmm)
     {
       int m0 = mm % 10;
@@ -949,13 +945,9 @@ void loop()
 #endif
         draw_weather ();
     }
-    
+    //hours
     if (hh != prevhh) 
     {
-      int h0 = hh % 10;
-      int h1 = hh / 10;
-      if (h0 != digit4.Value ()) digit4.Morph (h0);
-      if (h1 != digit5.Value ()) digit5.Morph (h1);
       prevhh = hh;
       //
       draw_date ();
@@ -965,6 +957,14 @@ void loop()
         ntpsync = 1;
         //bri change is taken care of due to the sync
       }
+      //military time?
+      if (hh > 12 && military[0] == 'N')
+        hh -= 12;
+      //
+      int h0 = hh % 10;
+      int h1 = hh / 10;
+      if (h0 != digit4.Value ()) digit4.Morph (h0);
+      if (h1 != digit5.Value ()) digit5.Morph (h1);
     }//hh changed
   }
   //set NTP sync interval as needed
