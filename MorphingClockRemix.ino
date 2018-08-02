@@ -71,37 +71,38 @@ Digit digit5(&display, 0, 63 - 7 - 9*6, 8, display.color565(0, 0, 255));
 void display_updater ()
 {
   //display.displayTestPattern(70);
-  display.display(70);
+  display.display (70);
 }
 #endif
 
-void getWeather();
+void getWeather ();
 
 void configModeCallback (WiFiManager *myWiFiManager) 
 {
-  Serial.println("Entered config mode");
-  Serial.println(WiFi.softAPIP());
+  Serial.println ("Entered config mode");
+  Serial.println (WiFi.softAPIP());
 
   // You could indicate on your screen or by an LED you are in config mode here
 
   // We don't want the next time the boar resets to be considered a double reset
   // so we remove the flag
-  drd.stop();
+  drd.stop ();
 }
 
 char timezone[5] = "0";
-char military[3] = "Y";  // 24 hour mode? Y/N
-char u_metric[3] = "Y";  // use metric for units? Y/N
-bool loadConfig() 
+char military[3] = "Y";     // 24 hour mode? Y/N
+char u_metric[3] = "Y";     // use metric for units? Y/N
+char date_fmt[7] = "D.M.Y"; // date format: D.M.Y or M.D.Y or M.D or D.M or D/M/Y.. looking for trouble
+bool loadConfig () 
 {
-  File configFile = SPIFFS.open("/config.json", "r");
+  File configFile = SPIFFS.open ("/config.json", "r");
   if (!configFile) 
   {
     Serial.println("Failed to open config file");
     return false;
   }
 
-  size_t size = configFile.size();
+  size_t size = configFile.size ();
   if (size > 1024) 
   {
     Serial.println("Config file size is too large");
@@ -111,12 +112,12 @@ bool loadConfig()
   // Allocate a buffer to store contents of the file.
   std::unique_ptr<char[]> buf(new char[size]);
 
-  configFile.readBytes(buf.get(), size);
+  configFile.readBytes (buf.get(), size);
 
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& json = jsonBuffer.parseObject(buf.get());
 
-  if (!json.success()) 
+  if (!json.success ()) 
   {
     Serial.println("Failed to parse config file");
     return false;
@@ -131,17 +132,24 @@ bool loadConfig()
   {
     Serial.println ("metric units not set, using default: Y");
   }
+  if (json.get<const char*>("date-format"))
+    strcpy (date_fmt, json["date-format"]);
+  else
+  {
+    Serial.println ("date format not set, using default: D.M.Y");
+  }
   
   return true;
 }
 
-bool saveConfig() 
+bool saveConfig () 
 {
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
   json["timezone"] = timezone;
   json["military"] = military;
   json["metric"] = u_metric;
+  json["date-format"] = date_fmt;
 
   File configFile = SPIFFS.open ("/config.json", "w");
   if (!configFile)
@@ -157,6 +165,8 @@ bool saveConfig()
   Serial.println (military);
   Serial.print ("metric=");
   Serial.println (u_metric);
+  Serial.print ("date-format=");
+  Serial.println (date_fmt);
 
   json.printTo (configFile);
   return true;
@@ -190,6 +200,8 @@ void wifi_setup ()
   wifiManager.addParameter (&militaryParameter);
   WiFiManagerParameter metricParameter ("metric", "Metric Units (Y/N)", u_metric, 3); 
   wifiManager.addParameter (&metricParameter);
+  WiFiManagerParameter dmydateParameter ("date_fmt", "Date Format (D.M.Y)", date_fmt, 6); 
+  wifiManager.addParameter (&dmydateParameter);
 
   //-- Double-Reset --
   if (drd.detectDoubleReset ()) 
@@ -238,12 +250,16 @@ void wifi_setup ()
   Serial.println (military);
   Serial.print ("metric=");
   Serial.println (u_metric);
-  //-- Timezone --
+  Serial.print ("date-format=");
+  Serial.println (date_fmt);
+  //timezone
   strcpy (timezone, timeZoneParameter.getValue ());
-  //-- Military --
+  //military time
   strcpy (military, militaryParameter.getValue ());
-  //-- Military --
+  //metric units
   strcpy (u_metric, metricParameter.getValue ());
+  //date format
+  strcpy (date_fmt, dmydateParameter.getValue ());
   //start NTP
   NTP.begin ("pool.ntp.org", String(timezone).toInt(), false);
   NTP.setInterval (10);//force rapid sync in 10sec
@@ -324,7 +340,7 @@ void getWeather ()
   }
   Serial.print ("connecting to weather server.. "); 
   // if you get a connection, report back via serial: 
-  if (client.connect (server, 80)) 
+  if (client.connect (server, 80))
   { 
     Serial.println ("connected."); 
     // Make a HTTP request: 
@@ -775,12 +791,35 @@ void draw_date ()
     //TFDrawChar (&display, '0' + i%10, xo + i * 5, yo, display.color565 (0, 255, 0));
   //date below the clock
   long tnow = now();
-  String lstr = (day(tnow) < 10 ? "0" + String(day(tnow)) : String(day(tnow))) + "." + 
-                (month(tnow) < 10 ? "0" + String(month(tnow)) : String(month(tnow))) + "." + 
-                String(year(tnow));
-  xo = 3*TF_COLS; yo = 26;
-  TFDrawText (&display, lstr, xo, yo, cc_grn);
+  String lstr = "";
+  for (int i = 0; i < 5; i += 2)
+  {
+    switch (date_fmt[i])
+    {
+      case 'D':
+        lstr += (day(tnow) < 10 ? "0" + String(day(tnow)) : String(day(tnow)));
+        if (i < 4)
+          lstr += date_fmt[i + 1];
+        break;
+      case 'M':
+        lstr += (month(tnow) < 10 ? "0" + String(month(tnow)) : String(month(tnow)));
+        if (i < 4)
+          lstr += date_fmt[i + 1];
+        break;
+      case 'Y':
+        lstr += String(year(tnow));
+        if (i < 4)
+          lstr += date_fmt[i + 1];
+        break;
+    }
+  }
   //
+  if (lstr.length())
+  {
+    //
+    xo = 3*TF_COLS; yo = 26;
+    TFDrawText (&display, lstr, xo, yo, cc_grn);
+  }
 }
 
 void draw_animations (int stp)
