@@ -1,7 +1,8 @@
 # MorphingClockRemix
 Remix from HarryFun's great Morphing Digital Clock idea https://www.instructables.com/id/Morphing-Digital-Clock/
 Follow the great tutorial there and eventually use this code as alternative.
- 
+https://github.com/lmirel/MorphingClockRemix/blob/master/MorphingClockRemix.jpg
+
 - main code is based on the NTPClient lib example for ESP, the lib itself is used as is for NTP sync https://github.com/2dom/NtpClient
 - use fast NTP sync on start then adapt to one sync per day (or so)
 - 12/24h time format
