@@ -237,13 +237,6 @@ void wifi_setup ()
     wifiManager.autoConnect (wifiManagerAPName);
   }
   
-  //-- Status --
-  //display.fillScreen (0);
-  //display.setCursor (2, row1);
-  TFDrawText (&display, String("     ONLINE     "), 0, 13, display.color565(0, 0, 255));
-  Serial.print ("WiFi connected, IP address: ");
-  Serial.println (WiFi.localIP ());
-  //
   Serial.print ("timezone=");
   Serial.println (timezone);
   Serial.print ("military=");
@@ -260,6 +253,12 @@ void wifi_setup ()
   strcpy (u_metric, metricParameter.getValue ());
   //date format
   strcpy (date_fmt, dmydateParameter.getValue ());
+  //display.fillScreen (0);
+  //display.setCursor (2, row1);
+  TFDrawText (&display, String("     ONLINE     "), 0, 13, display.color565(0, 0, 255));
+  Serial.print ("WiFi connected, IP address: ");
+  Serial.println (WiFi.localIP ());
+  //
   //start NTP
   NTP.begin ("pool.ntp.org", String(timezone).toInt(), false);
   NTP.setInterval (10);//force rapid sync in 10sec
@@ -309,9 +308,16 @@ void setup()
 	});
   //prep screen for clock display
   display.fillScreen (0);
-  int cc_blu = display.color565 (0, 0, cin);
-  digit1.DrawColon (cc_blu);
-  digit3.DrawColon (cc_blu);
+  int cc_gry = display.color565 (128, 128, 128);
+  //reset digits color
+  digit0.SetColor (cc_gry);
+  digit1.SetColor (cc_gry);
+  digit2.SetColor (cc_gry);
+  digit3.SetColor (cc_gry);
+  digit4.SetColor (cc_gry);
+  digit5.SetColor (cc_gry);
+  digit1.DrawColon (cc_gry);
+  digit3.DrawColon (cc_gry);
   //
   Serial.print ("display color range [");
   Serial.print (display.color565 (0, 0, 0));
@@ -324,7 +330,7 @@ void setup()
 //open weather map api key 
 String apiKey   = ""; //e.g a hex string like "abcdef0123456789abcdef0123456789"
 //the city you want the weather for 
-String location = "Paris,FR"; //e.g. "Paris,FR"
+String location = "Muenchen,DE"; //e.g. "Paris,FR"
 char server[]   = "api.openweathermap.org";
 WiFiClient client;
 int tempM = -10000;
@@ -667,7 +673,10 @@ void draw_weather_conditions ()
     case 0://unk
       break;
     case 1://sunny
-      DrawIcon (&display, sunny_ico, xo, yo, 10, 5);
+      if (!daytime)
+        DrawIcon (&display, moony_ico, xo, yo, 10, 5);
+      else
+        DrawIcon (&display, sunny_ico, xo, yo, 10, 5);
       //DrawIcon (&display, cloudy_ico, xo, yo, 10, 5);
       //DrawIcon (&display, ovrcst_ico, xo, yo, 10, 5);
       //DrawIcon (&display, rain_ico, xo, yo, 10, 5);
@@ -706,7 +715,8 @@ void draw_weather ()
   int cc_gry = display.color565 (128, 128, 128);
   int cc_dgr = display.color565 (30, 30, 30);
   Serial.println ("showing the weather");
-  xo = 1; yo = 1;
+  xo = 0; yo = 1;
+  TFDrawText (&display, String("                "), xo, yo, cc_dgr);
   if (tempM == -10000 || humiM == -10000 || presM == -10000)
   {
     //TFDrawText (&display, String("NO WEATHER DATA"), xo, yo, cc_dgr);
@@ -751,11 +761,11 @@ void draw_weather ()
     if (humiM < 15)
       lcc = cc_wht;
     lstr = String (humiM) + "%";
-    xo = 7*TF_COLS; yo = 1;
+    xo = 8*TF_COLS; yo = 1;
     TFDrawText (&display, lstr, xo, yo, lcc);
     //-pressure
     lstr = String (presM);
-    xo = 10*TF_COLS; yo = 1;
+    xo = 12*TF_COLS; yo = 1;
     TFDrawText (&display, lstr, xo, yo, cc_blu);
     //
     draw_weather_conditions ();
@@ -770,17 +780,21 @@ void draw_love ()
   yo = 1;
   int cc = random (255, 65535);
   xo  = 0; TFDrawChar (&display, 'L', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, 'O', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, 'V', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, 'E', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, 'h', xo, yo, display.color565 (255, 0, 0));
-  xo += 5; TFDrawChar (&display, 'Y', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, 'O', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, 'U', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, ',', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, 'B', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, 'O', xo, yo, cc); cc = random (255, 65535);
-  xo += 5; TFDrawChar (&display, 'O', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'O', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'V', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'E', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, ' ', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'h', xo, yo, display.color565 (255, 0, 0));
+  xo += 4; TFDrawChar (&display, 'i', xo, yo, display.color565 (255, 0, 0));
+  xo += 4; TFDrawChar (&display, ' ', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'Y', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'O', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'U', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, ',', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, ' ', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'B', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'O', xo, yo, cc); cc = random (255, 65535);
+  xo += 4; TFDrawChar (&display, 'O', xo, yo, cc); cc = random (255, 65535);
 }
 //
 void draw_date ()
@@ -862,13 +876,6 @@ void draw_animations (int stp)
     if (af)
       DrawIcon (&display, af, xo, yo, 10, 5);
   }
-  //cin = 25 + (i%22) * 10;
-  //Serial.print ("draw brightness ");
-  //Serial.println (cin);
-  //ntpsync = 1;
-  //condM = (i%7);
-  //draw_weather ();
-  //
 }
 
 byte prevhh = 0;
@@ -923,25 +930,29 @@ void loop()
       daytime = 1;
     }
     //we had a sync so draw without morphing
+    int cc_gry = display.color565 (128, 128, 128);
+    int cc_dgr = display.color565 (30, 30, 30);
     //dark blue is little visible on a dimmed screen
-    int cc_blu = display.color565 (0, 0, cin);
+    //int cc_blu = display.color565 (0, 0, cin);
+    int cc_col = cc_gry;
+    //
     if (cin == 25)
-      cc_blu = display.color565 (0, 0, 60);
+      cc_col = cc_dgr;
     //reset digits color
-    digit0.SetColor (cc_blu);
-    digit1.SetColor (cc_blu);
-    digit2.SetColor (cc_blu);
-    digit3.SetColor (cc_blu);
-    digit4.SetColor (cc_blu);
-    digit5.SetColor (cc_blu);
+    digit0.SetColor (cc_col);
+    digit1.SetColor (cc_col);
+    digit2.SetColor (cc_col);
+    digit3.SetColor (cc_col);
+    digit4.SetColor (cc_col);
+    digit5.SetColor (cc_col);
     //clear screen
     display.fillScreen (0);
     //date and weather
     draw_weather ();
     draw_date ();
     //
-    digit1.DrawColon (cc_blu);
-    digit3.DrawColon (cc_blu);
+    digit1.DrawColon (cc_col);
+    digit3.DrawColon (cc_col);
     //military time?
     if (hh > 12 && military[0] == 'N')
       hh -= 12;
@@ -977,6 +988,7 @@ void loop()
       if (m1 != digit3.Value ()) digit3.Morph (m1);
       prevmm = mm;
       //
+//#define SHOW_SOME_LOVE
 #ifdef SHOW_SOME_LOVE
       if (mm == 0)
         draw_love ();

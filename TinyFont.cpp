@@ -849,11 +849,22 @@ TFFace tinyFont[] =
   {
     //pixels
     {
-      0b00001010,
-      0b00011111,
-      0b00011111,
-      0b00001110,
-      0b00000100,
+      0b00000110,
+      0b00001111,
+      0b00001111,
+      0b00000111,
+      0b00000001,
+    },
+  },
+  //i
+  {
+    //pixels
+    {
+      0b000000110,
+      0b000001111,
+      0b000001111,
+      0b000001110,
+      0b000001000,
     },
   },
 };
@@ -863,16 +874,22 @@ const int cfblack = 0;
 void TFDrawChar (PxMATRIX* d, char value, char xo, char yo, int col)
 {
   int i, j, cfi = value - ' ';
-  for (i = 0; i < TF_ROWS; i++)
+  if (cfi > sizeof (tinyFont) / sizeof (TFFace))
   {
-    for (j = 0; j < TF_COLS; j++)
-    {
-      if (tinyFont[cfi].fface[i] & (1 << j))
-        d->drawPixel (xo + TF_COLS - j, yo + i, col);
-      else
-        d->drawPixel (xo + TF_COLS - j, yo + i, cfblack);
-    }
+    Serial.print ("character code not supported: ");
+    Serial.println (cfi + ' ');
   }
+  else
+    for (i = 0; i < TF_ROWS; i++)
+    {
+      for (j = 0; j < TF_COLS; j++)
+      {
+        if (tinyFont[cfi].fface[i] & (1 << j))
+          d->drawPixel (xo + TF_COLS - j, yo + i, col);
+        else
+          d->drawPixel (xo + TF_COLS - j, yo + i, cfblack);
+      }
+    }
 }
 
 #define TFLINE_LEN  (64 / TF_COLS)
