@@ -341,10 +341,10 @@ void getWeather ()
 {
   if (!apiKey.length ())
   {
-    Serial.println ("!missing API KEY for weather data, skipping"); 
+    Serial.println ("w:missing API KEY for weather data, skipping"); 
     return;
   }
-  Serial.print ("connecting to weather server.. "); 
+  Serial.print ("i:connecting to weather server.. "); 
   // if you get a connection, report back via serial: 
   if (client.connect (server, 80))
   { 
@@ -353,7 +353,7 @@ void getWeather ()
     client.print ("GET /data/2.5/weather?"); 
     client.print ("q="+location); 
     client.print ("&appid="+apiKey); 
-    client.print ("&cnt=3"); 
+    client.print ("&cnt=1"); 
     (*u_metric=='Y')?client.println ("&units=metric"):client.println ("&units=imperial");
     client.println ("Host: api.openweathermap.org"); 
     client.println ("Connection: close"); 
@@ -361,16 +361,18 @@ void getWeather ()
   } 
   else 
   { 
-    Serial.println ("!unable to connect");
+    Serial.println ("w:unable to connect");
     return;
   } 
   delay (1000);
-  String line = "";
   String sval = "";
   int bT, bT2;
-  while (client.connected ()) 
+  //do your best
+  String line = client.readStringUntil ('\n');
+  if (!line.length ())
+    Serial.println ("w:unable to retrieve weather data");
+  else
   {
-    line = client.readStringUntil ('\n'); 
     Serial.print ("weather:"); 
     Serial.println (line); 
     //weather conditions - "main":"Clear",
@@ -394,7 +396,6 @@ void getWeather ()
         condM = 5;
       else if (sval.equals("Snow"))
         condM = 6;
-      //tempM = sval.toInt();
     }
     //tempM
     bT = line.indexOf ("\"temp\":");
