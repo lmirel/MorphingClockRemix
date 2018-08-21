@@ -336,7 +336,8 @@ WiFiClient client;
 int tempM = -10000;
 int presM = -10000;
 int humiM = -10000;
-int condM = 0;  //0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
+int condM = -1;  //-1 - undefined, 0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
+String condS = "";
 void getWeather ()
 {
   if (!apiKey.length ())
@@ -356,7 +357,7 @@ void getWeather ()
     client.print ("&cnt=1"); 
     (*u_metric=='Y')?client.println ("&units=metric"):client.println ("&units=imperial");
     client.println ("Host: api.openweathermap.org"); 
-    client.println ("Connection: close"); 
+    client.println ("Connection: close");
     client.println (); 
   } 
   else 
@@ -384,6 +385,7 @@ void getWeather ()
       Serial.print ("cond ");
       Serial.println (sval);
       //0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
+      condM = 0;
       if (sval.equals("Clear"))
         condM = 1;
       else if (sval.equals("Clouds"))
@@ -396,6 +398,8 @@ void getWeather ()
         condM = 5;
       else if (sval.equals("Snow"))
         condM = 6;
+      //
+      condS = sval;
     }
     //tempM
     bT = line.indexOf ("\"temp\":");
@@ -753,6 +757,17 @@ void draw_weather ()
     Serial.print ("temperature: ");
     Serial.println (lstr);
     TFDrawText (&display, lstr, xo, yo, lcc);
+    //weather conditions
+    //condM = 0;
+    if (condM == 0)
+    {
+      Serial.println ("!weather condition icon unknown");
+      //draw the first 5 letters from the unknown weather condition
+      xo = 3*TF_COLS;
+      lstr = condS.substring (0, (condS.length () > 5?5:condS.length ()));
+      lstr.toUpperCase ();
+      TFDrawText (&display, lstr, xo, yo, cc_dgr);
+    }
     //-humidity
     lcc = cc_red;
     if (humiM < 65)
@@ -762,14 +777,15 @@ void draw_weather ()
     if (humiM < 15)
       lcc = cc_wht;
     lstr = String (humiM) + "%";
-    xo = 8*TF_COLS; yo = 1;
+    xo = 8*TF_COLS;
     TFDrawText (&display, lstr, xo, yo, lcc);
     //-pressure
     lstr = String (presM);
-    xo = 12*TF_COLS; yo = 1;
+    xo = 12*TF_COLS;
     TFDrawText (&display, lstr, xo, yo, cc_blu);
     //
-    draw_weather_conditions ();
+    if (condM > 0)
+      draw_weather_conditions ();
   }
 }
 
