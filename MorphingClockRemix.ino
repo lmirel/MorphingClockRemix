@@ -333,6 +333,8 @@ String apiKey   = ""; //e.g a hex string like "abcdef0123456789abcdef0123456789"
 String location = "Muenchen,DE"; //e.g. "Paris,FR"
 char server[]   = "api.openweathermap.org";
 WiFiClient client;
+int tempMin = -10000;
+int tempMax = -10000;
 int tempM = -10000;
 int presM = -10000;
 int humiM = -10000;
@@ -407,12 +409,36 @@ void getWeather ()
     {
       bT2 = line.indexOf (",\"", bT + 7);
       sval = line.substring (bT + 7, bT2);
-      Serial.print ("temp ");
+      Serial.print ("temp: ");
       Serial.println (sval);
       tempM = sval.toInt ();
     }
     else
       Serial.println ("temp NOT found!");
+    //tempMin
+    bT = line.indexOf ("\"temp_min\":");
+    if (bT > 0)
+    {
+      bT2 = line.indexOf (",\"", bT + 11);
+      sval = line.substring (bT + 11, bT2);
+      Serial.print ("temp min: ");
+      Serial.println (sval);
+      tempMin = sval.toInt ();
+    }
+    else
+      Serial.println ("temp_min NOT found!");
+    //tempMax
+    bT = line.indexOf ("\"temp_max\":");
+    if (bT > 0)
+    {
+      bT2 = line.indexOf ("},", bT + 11);
+      sval = line.substring (bT + 11, bT2);
+      Serial.print ("temp max: ");
+      Serial.println (sval);
+      tempMax = sval.toInt ();
+    }
+    else
+      Serial.println ("temp_max NOT found!");
     //pressM
     bT = line.indexOf ("\"pressure\":");
     if (bT > 0)
@@ -672,7 +698,14 @@ void draw_weather_conditions ()
   //0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
   Serial.print ("weather conditions ");
   Serial.println (condM);
-  xo = 4*TF_COLS;
+  //cleanup previous cond
+  if (condM != 0)
+  {
+    xo = 3*TF_COLS; yo = 1;
+    TFDrawText (&display, String("     "), xo, yo, 0);
+  }
+  //
+  xo = 4*TF_COLS; yo = 1;
   switch (condM)
   {
     case 0://unk
@@ -783,7 +816,37 @@ void draw_weather ()
     lstr = String (presM);
     xo = 12*TF_COLS;
     TFDrawText (&display, lstr, xo, yo, cc_blu);
-    //
+    //draw temp min/max
+    if (tempMin > -10000)
+    {
+      xo = 0*TF_COLS; yo = 26;
+      lstr = String (tempMin);// + String((*u_metric=='Y')?"C":"F");
+      Serial.print ("temp min: ");
+      Serial.println (lstr);
+      //blue if negative
+      int ct = cc_dgr;
+      if (tempMin < 0)
+        ct = cc_blu;
+      TFDrawText (&display, lstr, xo, yo, ct);
+    }
+    if (tempMax > -10000)
+    {
+      //move the text to the right or left as needed
+      xo = 14*TF_COLS; yo = 26;
+      if (tempMax < 10)
+        xo = 15*TF_COLS;
+      if (tempMax > 99)
+        xo = 13*TF_COLS;
+      lstr = String (tempMax);// + String((*u_metric=='Y')?"C":"F");
+      Serial.print ("temp max: ");
+      Serial.println (lstr);
+      //blue if negative
+      int ct = cc_dgr;
+      if (tempMax < 0)
+        ct = cc_blu;
+      TFDrawText (&display, lstr, xo, yo, ct);
+    }
+    //weather conditions
     if (condM > 0)
       draw_weather_conditions ();
   }
