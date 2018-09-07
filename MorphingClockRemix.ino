@@ -396,12 +396,16 @@ void getWeather ()
         condM = 3;
       else if (sval.equals("Rain"))
         condM = 4;
+      else if (sval.equals("Drizzle"))
+        condM = 4;
       else if (sval.equals("Thunderstorm"))
         condM = 5;
       else if (sval.equals("Snow"))
         condM = 6;
       //
       condS = sval;
+      Serial.print ("condM ");
+      Serial.println (condM);
     }
     //tempM
     bT = line.indexOf ("\"temp\":");
@@ -699,9 +703,19 @@ void draw_weather_conditions ()
   Serial.print ("weather conditions ");
   Serial.println (condM);
   //cleanup previous cond
-  if (condM != 0)
+  xo = 3*TF_COLS; yo = 1;
+  if (condM == 0 && daytime)
   {
-    xo = 3*TF_COLS; yo = 1;
+    Serial.print ("!weather condition icon unknown, show: ");
+    Serial.println (condS);
+    int cc_dgr = display.color565 (30, 30, 30);
+    //draw the first 5 letters from the unknown weather condition
+    String lstr = condS.substring (0, (condS.length () > 5?5:condS.length ()));
+    lstr.toUpperCase ();
+    TFDrawText (&display, lstr, xo, yo, cc_dgr);
+  }
+  else
+  {
     TFDrawText (&display, String("     "), xo, yo, 0);
   }
   //
@@ -791,16 +805,6 @@ void draw_weather ()
     Serial.println (lstr);
     TFDrawText (&display, lstr, xo, yo, lcc);
     //weather conditions
-    //condM = 0;
-    if (condM == 0)
-    {
-      Serial.println ("!weather condition icon unknown");
-      //draw the first 5 letters from the unknown weather condition
-      xo = 3*TF_COLS;
-      lstr = condS.substring (0, (condS.length () > 5?5:condS.length ()));
-      lstr.toUpperCase ();
-      TFDrawText (&display, lstr, xo, yo, cc_dgr);
-    }
     //-humidity
     lcc = cc_red;
     if (humiM < 65)
@@ -847,8 +851,7 @@ void draw_weather ()
       TFDrawText (&display, lstr, xo, yo, ct);
     }
     //weather conditions
-    if (condM > 0)
-      draw_weather_conditions ();
+    draw_weather_conditions ();
   }
 }
 
