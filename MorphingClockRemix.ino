@@ -824,17 +824,22 @@ void draw_weather ()
     if (tempMin > -10000)
     {
       xo = 0*TF_COLS; yo = 26;
+      TFDrawText (&display, "   ", xo, yo, 0);
       lstr = String (tempMin);// + String((*u_metric=='Y')?"C":"F");
-      Serial.print ("temp min: ");
-      Serial.println (lstr);
       //blue if negative
       int ct = cc_dgr;
       if (tempMin < 0)
+      {
         ct = cc_blu;
+        lstr = String (-tempMin);// + String((*u_metric=='Y')?"C":"F");
+      }
+      Serial.print ("temp min: ");
+      Serial.println (lstr);
       TFDrawText (&display, lstr, xo, yo, ct);
     }
     if (tempMax > -10000)
     {
+      TFDrawText (&display, "   ", 13*TF_COLS, yo, 0);
       //move the text to the right or left as needed
       xo = 14*TF_COLS; yo = 26;
       if (tempMax < 10)
@@ -842,12 +847,15 @@ void draw_weather ()
       if (tempMax > 99)
         xo = 13*TF_COLS;
       lstr = String (tempMax);// + String((*u_metric=='Y')?"C":"F");
-      Serial.print ("temp max: ");
-      Serial.println (lstr);
       //blue if negative
       int ct = cc_dgr;
       if (tempMax < 0)
+      {
         ct = cc_blu;
+        lstr = String (-tempMax);// + String((*u_metric=='Y')?"C":"F");
+      }
+      Serial.print ("temp max: ");
+      Serial.println (lstr);
       TFDrawText (&display, lstr, xo, yo, ct);
     }
     //weather conditions
