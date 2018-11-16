@@ -16,6 +16,11 @@ provided 'AS IS', use at your own risk
 //#include <Adafruit_GFX.h>    // Core graphics library
 //#include <Fonts/FreeMono9pt7b.h>
 
+int sunriseH = 0;
+int sunriseM = 0;
+int sunsetH = 0;
+int sunsetM = 0;
+
 //=== WIFI MANAGER ===
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
@@ -273,6 +278,10 @@ void wifi_setup ()
   getWeather ();
 }
 
+// 275
+int t_now;
+int t_sunrise;
+int t_sunset;
 byte hh;
 byte mm;
 byte ss;
@@ -467,6 +476,30 @@ void getWeather ()
     }
     else
       Serial.println ("humidity NOT found!");
+  	//sunrise
+	// 470
+    bT = line.indexOf ("\"sunrise\":");
+    if (bT > 0)
+    {
+      bT2 = line.indexOf (",\"", bT + 10);
+      sval = line.substring (bT + 10, bT2);
+      sunriseH = hour(sval.toInt() + (String(timezone).toInt() * 3600));
+      sunriseM = minute(sval.toInt());
+    }
+    else
+      Serial.println ("sunrise NOT found!");
+  
+    //sunset
+    bT = line.indexOf ("\"sunset\":");
+    if (bT > 0)
+    {
+      bT2 = line.indexOf (",\"", bT + 9);
+      sval = line.substring (bT + 9, bT2);
+      sunsetH = hour(sval.toInt() + (String(timezone).toInt() * 3600));
+      sunsetM = minute(sval.toInt());
+    }
+    else
+      Serial.println ("sunset NOT found!");  
   }//connected
 }
 
@@ -992,6 +1025,7 @@ void loop()
   hh = NTP.getHour ();
   mm = NTP.getMinute ();
   ss = NTP.getSecond ();
+  t_now = (hh*100)+mm;
   //
   if (ntpsync)
   {
@@ -1000,26 +1034,29 @@ void loop()
     prevss = ss;
     prevmm = mm;
     prevhh = hh;
-    //brightness control: dimmed during the night(25), bright during the day(150)
-    if (hh >= 20 && cin == 150)
-    {
-      cin = 25;
-      Serial.println ("night mode brightness");
-      daytime = 0;
-    }
-    if (hh < 8 && cin == 150)
-    {
-      cin = 25;
-      Serial.println ("night mode brightness");
-      daytime = 0;
-    }
-    //during the day, bright
-    if (hh >= 8 && hh < 20 && cin == 25)
-    {
-      cin = 150;
-      Serial.println ("day mode brightness");
-      daytime = 1;
-    }
+//brightness control: dimmed during the night(25), bright during the day(150)
+	// 1003   
+    t_sunset=(sunsetH*100)+sunsetM;
+    t_sunrise=(sunriseH*100)+sunriseM;
+	  if ((t_now >= t_sunset) && cin == 150)
+      {
+        cin = 25;
+        Serial.println ("night mode brightness");
+        daytime = 0;
+      }
+  	if ((t_now < t_sunrise) && cin == 150)
+      {
+        cin = 25;
+        Serial.println ("night mode brightness");
+        daytime = 0;
+      }
+      //during the day, bright
+  	if ((t_now >= t_sunrise && t_now < t_sunset) && cin == 25)
+      {
+        cin = 150;
+        Serial.println ("day mode brightness");
+        daytime = 1;
+      }
     //we had a sync so draw without morphing
     int cc_gry = display.color565 (128, 128, 128);
     int cc_dgr = display.color565 (30, 30, 30);
