@@ -16,12 +16,6 @@ provided 'AS IS', use at your own risk
 //#include <Adafruit_GFX.h>    // Core graphics library
 //#include <Fonts/FreeMono9pt7b.h>
 
-//initial values for sunrise and sunset
-int sunriseH = 0;
-int sunriseM = 0;
-int sunsetH = 0;
-int sunsetM = 0;
-
 //=== WIFI MANAGER ===
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
@@ -349,6 +343,13 @@ int presM = -10000;
 int humiM = -10000;
 int condM = -1;  //-1 - undefined, 0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
 String condS = "";
+int wind_speed;
+int wind_nr;
+String wind_direction;
+int sunriseH = 0;
+int sunriseM = 0;
+int sunsetH = 0;
+int sunsetM = 0;
 void getWeather ()
 {
   if (!apiKey.length ())
@@ -499,7 +500,61 @@ void getWeather ()
     }
     else
       Serial.println ("sunset NOT found!");  
+    //wind speed
+    bT = line.indexOf ("\"speed\":");
+    if (bT > 0)
+    {
+      bT2 = line.indexOf (",\"", bT + 8);
+      sval = line.substring (bT + 8, bT2);
+      wind_speed = sval.toInt();
+    }
+    else
+      Serial.println ("windspeed NOT found!");        
+    //wind direction
+    bT = line.indexOf ("\"deg\":");
+    if (bT > 0)
+    {
+      bT2 = line.indexOf (",\"", bT + 6);
+      sval = line.substring (bT + 6, bT2);
+      wind_nr = round(((sval.toInt() % 360))/45.0) + 1;
+      switch (wind_nr){
+        case 1:
+          wind_direction = "N";
+          break;
+        case 2:
+          wind_direction = "NE";
+          break;
+        case 3:
+          wind_direction = "E";
+          break;
+        case 4:
+          wind_direction = "SE";
+          break;
+        case 5:
+          wind_direction = "S";
+          break;
+        case 6:
+          wind_direction = "SW";
+          break;
+        case 7:
+          wind_direction = "W";
+          break;
+        case 8:
+          wind_direction = "NW";
+          break;
+        case 9:
+          wind_direction = "N";
+          break;        
+        default:
+          wind_direction = "NA";
+          break;
+    }                
+      Serial.println(wind_direction);
+    }
+    else
+      Serial.println ("windspeed NOT found!");  
   }//connected
+  
 }
 
 #include "TinyIcons.h"
@@ -853,7 +908,7 @@ void draw_weather ()
     xo = 12*TF_COLS;
     TFDrawText (&display, lstr, xo, yo, cc_blu);
     //draw temp min/max
-    if (tempMin > -10000)
+    /*if (tempMin > -10000)
     {
       xo = 0*TF_COLS; yo = 26;
       TFDrawText (&display, "   ", xo, yo, 0);
@@ -889,7 +944,39 @@ void draw_weather ()
       Serial.print ("temp max: ");
       Serial.println (lstr);
       TFDrawText (&display, lstr, xo, yo, ct);
+    }*/
+    //draw wind speed and direction
+    if (wind_speed > -10000)
+    {
+      xo = 0*TF_COLS; yo = 26;
+      TFDrawText (&display, "   ", xo, yo, 0);
+      lstr = String (wind_speed);// + String((*u_metric=='Y')?"M/S":"M/H");
+      //red if wind is strong
+      int ct = cc_dgr;
+      if (wind_speed > 12)
+      {
+        ct = cc_red;
+      }
+      Serial.print ("wind_speed: ");
+      Serial.println (lstr);
+      TFDrawText (&display, lstr, xo, yo, ct);
     }
+    if (wind_direction)
+    {
+      xo = 15*TF_COLS; yo = 26;
+      if(wind_direction.length() >1)
+        xo=14*TF_COLS;      
+     
+      TFDrawText (&display, "   ", xo, yo, 0);     
+      lstr = String (wind_direction);// + String((*u_metric=='Y')?"C":"F");
+      //blue if negative
+      int ct = cc_dgr;
+      
+      Serial.print ("wind_direction: ");
+      Serial.println (lstr);
+      TFDrawText (&display, lstr, xo, yo, ct);
+    }
+	
     //weather conditions
     draw_weather_conditions ();
   }
