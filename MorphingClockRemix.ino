@@ -963,9 +963,10 @@ void draw_weather ()
     }
     if (wind_direction)
     {
-      xo = 15*TF_COLS; yo = 26;
-      if(wind_direction.length() >1)
-        xo=14*TF_COLS;      
+      xo = 14*TF_COLS; yo = 26;
+      TFDrawText (&display, "   ", xo, yo, 0);     
+      if(wind_direction.length() == 1)
+        xo=15*TF_COLS;        
      
       TFDrawText (&display, "   ", xo, yo, 0);     
       lstr = String (wind_direction);// + String((*u_metric=='Y')?"C":"F");
