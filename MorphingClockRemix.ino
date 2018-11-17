@@ -485,6 +485,9 @@ void getWeather ()
       sval = line.substring (bT + 10, bT2);
       sunriseH = hour(sval.toInt() + (String(timezone).toInt() * 3600));
       sunriseM = minute(sval.toInt());
+      Serial.print ("sunrise ");
+      Serial.println (sunriseH);
+      Serial.println (sunriseM);	  
     }
     else
       Serial.println ("sunrise NOT found!");
@@ -497,6 +500,9 @@ void getWeather ()
       sval = line.substring (bT + 9, bT2);
       sunsetH = hour(sval.toInt() + (String(timezone).toInt() * 3600));
       sunsetM = minute(sval.toInt());
+      Serial.print ("sunrset ");
+      Serial.println (sunsetH);
+      Serial.println (sunsetM);    	  
     }
     else
       Serial.println ("sunset NOT found!");  
@@ -549,6 +555,8 @@ void getWeather ()
           wind_direction = "NA";
           break;
     }                
+      Serial.println(wind_direction);
+      Serial.print ("wind direction ");      
       Serial.println(wind_direction);
     }
     else
@@ -1112,7 +1120,6 @@ void loop()
   hh = NTP.getHour ();
   mm = NTP.getMinute ();
   ss = NTP.getSecond ();
-  t_now = (hh*100)+mm;
   //
   if (ntpsync)
   {
@@ -1124,6 +1131,8 @@ void loop()
 	//brightness control: dimmed during the night(25), bright during the day(150)	
     t_sunset=(sunsetH*100)+sunsetM;
     t_sunrise=(sunriseH*100)+sunriseM;
+	t_now = (hh*100)+mm;
+	
 	  if ((t_now >= t_sunset) && cin == 150)
       {
         cin = 25;
@@ -1196,6 +1205,11 @@ void loop()
     //minutes
     if (mm != prevmm)
     {
+	  if (mm == sunsetM || hh == sunriseM)
+      {
+        ntpsync = 1;
+        //bri change is taken care of due to the sync
+      }
       int m0 = mm % 10;
       int m1 = mm / 10;
       if (m0 != digit2.Value ()) digit2.Morph (m0);
@@ -1217,7 +1231,7 @@ void loop()
       //
       draw_date ();
       //brightness control: dimmed during the night(25), bright during the day(150)
-      if (hh == 20 || hh == 8)
+      if (hh == sunsetH || hh == sunriseH)
       {
         ntpsync = 1;
         //bri change is taken care of due to the sync
