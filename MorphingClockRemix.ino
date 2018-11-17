@@ -16,6 +16,7 @@ provided 'AS IS', use at your own risk
 //#include <Adafruit_GFX.h>    // Core graphics library
 //#include <Fonts/FreeMono9pt7b.h>
 
+//initial values for sunrise and sunset
 int sunriseH = 0;
 int sunriseM = 0;
 int sunsetH = 0;
@@ -278,7 +279,6 @@ void wifi_setup ()
   getWeather ();
 }
 
-// 275
 int t_now;
 int t_sunrise;
 int t_sunset;
@@ -477,7 +477,6 @@ void getWeather ()
     else
       Serial.println ("humidity NOT found!");
   	//sunrise
-	// 470
     bT = line.indexOf ("\"sunrise\":");
     if (bT > 0)
     {
@@ -1034,8 +1033,7 @@ void loop()
     prevss = ss;
     prevmm = mm;
     prevhh = hh;
-//brightness control: dimmed during the night(25), bright during the day(150)
-	// 1003   
+	//brightness control: dimmed during the night(25), bright during the day(150)	
     t_sunset=(sunsetH*100)+sunsetM;
     t_sunrise=(sunriseH*100)+sunriseM;
 	  if ((t_now >= t_sunset) && cin == 150)
