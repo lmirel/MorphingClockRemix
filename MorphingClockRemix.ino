@@ -1205,7 +1205,7 @@ void loop()
     //minutes
     if (mm != prevmm)
     {
-	  if (mm == sunsetM || hh == sunriseM)
+	  if (mm == sunsetM || mm == sunriseM)
       {
         ntpsync = 1;
         //bri change is taken care of due to the sync
