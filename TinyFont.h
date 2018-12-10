@@ -11,7 +11,7 @@
 
 #define TF_COLS 4
 #define TF_ROWS 5
-typedef struct TFFace 
+struct TFFace 
 {
   char fface[TF_ROWS]; //4 cols x 5 rows
 };

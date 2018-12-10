@@ -874,7 +874,7 @@ const int cfblack = 0;
 void TFDrawChar (PxMATRIX* d, char value, char xo, char yo, int col)
 {
   int i, j, cfi = value - ' ';
-  if (cfi > sizeof (tinyFont) / sizeof (TFFace))
+  if (cfi > (int)(sizeof (tinyFont) / sizeof (TFFace)))
   {
     Serial.print ("character code not supported: ");
     Serial.println (cfi + ' ');

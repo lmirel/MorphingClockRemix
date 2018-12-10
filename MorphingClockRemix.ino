@@ -763,8 +763,8 @@ void draw_weather ()
   int cc_red = display.color565 (cin, 0, 0);
   int cc_grn = display.color565 (0, cin, 0);
   int cc_blu = display.color565 (0, 0, cin);
-  int cc_ylw = display.color565 (cin, cin, 0);
-  int cc_gry = display.color565 (128, 128, 128);
+  //int cc_ylw = display.color565 (cin, cin, 0);
+  //int cc_gry = display.color565 (128, 128, 128);
   int cc_dgr = display.color565 (30, 30, 30);
   Serial.println ("showing the weather");
   xo = 0; yo = 1;
@@ -969,16 +969,242 @@ void draw_animations (int stp)
   }
 }
 
+//fireworks
+// adapted to Arduino pxMatrix
+// from https://r3dux.org/2010/10/how-to-create-a-simple-fireworks-effect-in-opengl-and-sdl/
+// Define our initial screen width, height, and colour depth
+int SCREEN_WIDTH  = 64;
+int SCREEN_HEIGHT = 32;
+
+const int FIREWORKS = 6;           // Number of fireworks
+const int FIREWORK_PARTICLES = 8;  // Number of particles per firework
+
+class Firework
+{
+  public:
+    float x[FIREWORK_PARTICLES];
+    float y[FIREWORK_PARTICLES];
+    char lx[FIREWORK_PARTICLES], ly[FIREWORK_PARTICLES];
+    float xSpeed[FIREWORK_PARTICLES];
+    float ySpeed[FIREWORK_PARTICLES];
+
+    char red;
+    char blue;
+    char green;
+    char alpha;
+
+    int framesUntilLaunch;
+
+    char particleSize;
+    boolean hasExploded;
+
+    Firework(); // Constructor declaration
+    void initialise();
+    void move();
+    void explode();
+};
+
+const float GRAVITY = 0.05f;
+const float baselineSpeed = -1.0f;
+const float maxSpeed = -2.0f;
+
+// Constructor implementation
+Firework::Firework()
+{
+  initialise();
+  for (int loop = 0; loop < FIREWORK_PARTICLES; loop++)
+  {
+    lx[loop] = 0;
+    ly[loop] = SCREEN_HEIGHT + 1; // Push the particle location down off the bottom of the screen
+  }
+}
+
+void Firework::initialise()
+{
+    // Pick an initial x location and  random x/y speeds
+    float xLoc = (rand() % SCREEN_WIDTH);
+    float xSpeedVal = baselineSpeed + (rand() % (int)maxSpeed);
+    float ySpeedVal = baselineSpeed + (rand() % (int)maxSpeed);
+
+    // Set initial x/y location and speeds
+    for (int loop = 0; loop < FIREWORK_PARTICLES; loop++)
+    {
+        x[loop] = xLoc;
+        y[loop] = SCREEN_HEIGHT + 1; // Push the particle location down off the bottom of the screen
+        xSpeed[loop] = xSpeedVal;
+        ySpeed[loop] = ySpeedVal;
+        //don't reset these otherwise particles won't be removed
+        //lx[loop] = 0;
+        //ly[loop] = SCREEN_HEIGHT + 1; // Push the particle location down off the bottom of the screen
+    }
+
+    // Assign a random colour and full alpha (i.e. particle is completely opaque)
+    red   = (rand() % 255);/// (float)RAND_MAX);
+    green = (rand() % 255); /// (float)RAND_MAX);
+    blue  = (rand() % 255); /// (float)RAND_MAX);
+    alpha = 50;//max particle frames
+
+    // Firework will launch after a random amount of frames between 0 and 400
+    framesUntilLaunch = ((int)rand() % (SCREEN_HEIGHT/2));
+
+    // Size of the particle (as thrown to glPointSize) - range is 1.0f to 4.0f
+    particleSize = 1.0f + ((float)rand() / (float)RAND_MAX) * 3.0f;
+
+    // Flag to keep trackof whether the firework has exploded or not
+    hasExploded = false;
+
+    //cout << "Initialised a firework." << endl;
+}
+
+void Firework::move()
+{
+    for (int loop = 0; loop < FIREWORK_PARTICLES; loop++)
+    {
+        // Once the firework is ready to launch start moving the particles
+        if (framesUntilLaunch <= 0)
+        {
+            //draw black on last known position
+            //display.drawPixel (x[loop], y[loop], cc_blk);
+            lx[loop] = x[loop];
+            ly[loop] = y[loop];
+            //
+            x[loop] += xSpeed[loop];
+
+            y[loop] += ySpeed[loop];
+
+            ySpeed[loop] += GRAVITY;
+        }
+    }
+    framesUntilLaunch--;
+
+    // Once a fireworks speed turns positive (i.e. at top of arc) - blow it up!
+    if (ySpeed[0] > 0.0f)
+    {
+        for (int loop2 = 0; loop2 < FIREWORK_PARTICLES; loop2++)
+        {
+            // Set a random x and y speed beteen -4 and + 4
+            xSpeed[loop2] = -4 + (rand() / (float)RAND_MAX) * 8;
+            ySpeed[loop2] = -4 + (rand() / (float)RAND_MAX) * 8;
+        }
+
+        //cout << "Boom!" << endl;
+        hasExploded = true;
+    }
+}
+
+void Firework::explode()
+{
+    for (int loop = 0; loop < FIREWORK_PARTICLES; loop++)
+    {
+        // Dampen the horizontal speed by 1% per frame
+        xSpeed[loop] *= 0.99;
+
+        //draw black on last known position
+        //display.drawPixel (x[loop], y[loop], cc_blk);
+        lx[loop] = x[loop];
+        ly[loop] = y[loop];
+        //
+        // Move the particle
+        x[loop] += xSpeed[loop];
+        y[loop] += ySpeed[loop];
+
+        // Apply gravity to the particle's speed
+        ySpeed[loop] += GRAVITY;
+    }
+
+    // Fade out the particles (alpha is stored per firework, not per particle)
+    if (alpha > 0)
+    {
+        alpha -= 1;
+    }
+    else // Once the alpha hits zero reset the firework
+    {
+        initialise();
+    }
+}
+
+// Create our array of fireworks
+Firework fw[FIREWORKS];
+
+void fireworks_loop (int frm)
+{
+  int cc_frw;
+  //display.fillScreen (0);
+  // Draw fireworks
+  //cout << "Firework count is: " << Firework::fireworkCount << endl;
+  for (int loop = 0; loop < FIREWORKS; loop++)
+  {
+      for (int particleLoop = 0; particleLoop < FIREWORK_PARTICLES; particleLoop++)
+      {
+  
+          // Set colour to yellow on way up, then whatever colour firework should be when exploded
+          if (fw[loop].hasExploded == false)
+          {
+              //glColor4f(1.0f, 1.0f, 0.0f, 1.0f);
+              cc_frw = display.color565 (255, 255, 0);
+          }
+          else
+          {
+              //glColor4f(fw[loop].red, fw[loop].green, fw[loop].blue, fw[loop].alpha);
+              //glVertex2f(fw[loop].x[particleLoop], fw[loop].y[particleLoop]);
+              cc_frw = display.color565 (fw[loop].red, fw[loop].green, fw[loop].blue);
+          }
+
+          // Draw the point
+          //glVertex2f(fw[loop].x[particleLoop], fw[loop].y[particleLoop]);
+          display.drawPixel (fw[loop].x[particleLoop], fw[loop].y[particleLoop], cc_frw);
+          display.drawPixel (fw[loop].lx[particleLoop], fw[loop].ly[particleLoop], 0);
+      }
+      // Move the firework appropriately depending on its explosion state
+      if (fw[loop].hasExploded == false)
+      {
+          fw[loop].move();
+      }
+      else
+      {
+          fw[loop].explode();
+      }
+      //
+      //delay (10);
+  }
+}
+//-
+
 byte prevhh = 0;
 byte prevmm = 0;
 byte prevss = 0;
+long tnow;
 void loop()
 {
 	static int i = 0;
 	static int last = 0;
   static int cm;
+  //time changes every miliseconds, we only want to draw when digits actually change
+  tnow = now ();
+  //
+  hh = hour (tnow);   //NTP.getHour ();
+  mm = minute (tnow); //NTP.getMinute ();
+  ss = second (tnow); //NTP.getSecond ();
   //animations?
   cm = millis ();
+  //
+  //fireworks on 1st of Jan 00:00, for 55 seconds
+  if (0 || (month (tnow) == 1 && day (tnow) == 1 && hh == 0 && mm == 0))
+  {
+    if (ss > 0 && ss < 30)
+    {
+      if ((cm - last) > 50)
+      {
+        //Serial.println(millis() - last);
+        last = cm;
+        i++;
+        fireworks_loop (i);
+      }
+      ntpsync = 1;
+      return;
+    }
+  }
+  //weather animations
   if ((cm - last) > 150)
   {
     //Serial.println(millis() - last);
@@ -988,10 +1214,6 @@ void loop()
     draw_animations (i);
     //
   }
-  //time changes every miliseconds, we only want to draw when digits actually change.
-  hh = NTP.getHour ();
-  mm = NTP.getMinute ();
-  ss = NTP.getSecond ();
   //
   if (ntpsync)
   {
@@ -1116,6 +1338,6 @@ void loop()
     NTP.setInterval (3600 * 24);//re-sync once a day
   }
   //
-	delay (0);
+	//delay (0);
 }
 
