@@ -16,31 +16,6 @@ provided 'AS IS', use at your own risk
 //#include <Adafruit_GFX.h>    // Core graphics library
 //#include <Fonts/FreeMono9pt7b.h>
 
-//=== WIFI MANAGER ===
-#include <DNSServer.h>
-#include <ESP8266WebServer.h>
-#include <WiFiManager.h> //https://github.com/tzapu/WiFiManager
-char wifiManagerAPName[] = "MorphClk";
-char wifiManagerAPPassword[] = "MorphClk";
-
-//== DOUBLE-RESET DETECTOR ==
-#include <DoubleResetDetector.h>
-#define DRD_TIMEOUT 10 // Second-reset must happen within 10 seconds of first reset to be considered a double-reset
-#define DRD_ADDRESS 0 // RTC Memory Address for the DoubleResetDetector to use
-DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
-
-//== SAVING CONFIG ==
-#include "FS.h"
-#include <ArduinoJson.h>
-bool shouldSaveConfig = false; // flag for saving data
-
-//callback notifying us of the need to save config
-void saveConfigCallback () 
-{
-  Serial.println("Should save config");
-  shouldSaveConfig = true;
-}
-
 #ifdef ESP8266
 #include <Ticker.h>
 Ticker display_ticker;
@@ -55,6 +30,10 @@ Ticker display_ticker;
 
 // Pins for LED MATRIX
 PxMATRIX display(64, 32, P_LAT, P_OE, P_A, P_B, P_C, P_D, P_E);
+#include "TinyFont.h"
+const byte row0 = 2+0*10;
+const byte row1 = 2+1*10;
+const byte row2 = 2+2*10;
 
 //=== SEGMENTS ===
 int cin = 25; //color intensity
@@ -65,6 +44,29 @@ Digit digit2(&display, 0, 63 - 4 - 9*3, 8, display.color565(0, 0, 255));
 Digit digit3(&display, 0, 63 - 4 - 9*4, 8, display.color565(0, 0, 255));
 Digit digit4(&display, 0, 63 - 7 - 9*5, 8, display.color565(0, 0, 255));
 Digit digit5(&display, 0, 63 - 7 - 9*6, 8, display.color565(0, 0, 255));
+
+/*
+ * the following parameters need to be defined in params.h
+ * 
+//wifi network
+char wifi_ssid[] = "";
+//wifi password
+char wifi_pass[] = "";
+//timezone
+char timezone[5] = "1";
+//use 24h time format
+char military[3] = "Y";     // 24 hour mode? Y/N
+//use metric data
+char u_metric[3] = "Y";     // use metric for units? Y/N
+//date format
+char date_fmt[7] = "D.M.Y"; // date format: D.M.Y or M.D.Y or M.D or D.M or D/M/Y.. looking for trouble
+//open weather map api key 
+String apiKey   = ""; //e.g a hex string like "abcdef0123456789abcdef0123456789"
+//the city you want the weather for 
+String location = "Muenchen,DE"; //e.g. "Paris,FR"
+ * 
+ */
+#include "params.h"
 
 #ifdef ESP8266
 // ISR for display refresh
@@ -77,202 +79,6 @@ void display_updater ()
 
 void getWeather ();
 
-void configModeCallback (WiFiManager *myWiFiManager) 
-{
-  Serial.println ("Entered config mode");
-  Serial.println (WiFi.softAPIP());
-
-  // You could indicate on your screen or by an LED you are in config mode here
-
-  // We don't want the next time the boar resets to be considered a double reset
-  // so we remove the flag
-  drd.stop ();
-}
-
-char timezone[5] = "0";
-char military[3] = "Y";     // 24 hour mode? Y/N
-char u_metric[3] = "Y";     // use metric for units? Y/N
-char date_fmt[7] = "D.M.Y"; // date format: D.M.Y or M.D.Y or M.D or D.M or D/M/Y.. looking for trouble
-bool loadConfig () 
-{
-  File configFile = SPIFFS.open ("/config.json", "r");
-  if (!configFile) 
-  {
-    Serial.println("Failed to open config file");
-    return false;
-  }
-
-  size_t size = configFile.size ();
-  if (size > 1024) 
-  {
-    Serial.println("Config file size is too large");
-    return false;
-  }
-
-  // Allocate a buffer to store contents of the file.
-  std::unique_ptr<char[]> buf(new char[size]);
-
-  configFile.readBytes (buf.get(), size);
-
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& json = jsonBuffer.parseObject(buf.get());
-
-  if (!json.success ()) 
-  {
-    Serial.println("Failed to parse config file");
-    return false;
-  }
-
-  strcpy (timezone, json["timezone"]);
-  strcpy (military, json["military"]);
-  //avoid reboot loop on systems where this is not set
-  if (json.get<const char*>("metric"))
-    strcpy (u_metric, json["metric"]);
-  else
-  {
-    Serial.println ("metric units not set, using default: Y");
-  }
-  if (json.get<const char*>("date-format"))
-    strcpy (date_fmt, json["date-format"]);
-  else
-  {
-    Serial.println ("date format not set, using default: D.M.Y");
-  }
-  
-  return true;
-}
-
-bool saveConfig () 
-{
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
-  json["timezone"] = timezone;
-  json["military"] = military;
-  json["metric"] = u_metric;
-  json["date-format"] = date_fmt;
-
-  File configFile = SPIFFS.open ("/config.json", "w");
-  if (!configFile)
-  {
-    Serial.println ("Failed to open config file for writing");
-    return false;
-  }
-
-  Serial.println ("Saving configuration to file:");
-  Serial.print ("timezone=");
-  Serial.println (timezone);
-  Serial.print ("military=");
-  Serial.println (military);
-  Serial.print ("metric=");
-  Serial.println (u_metric);
-  Serial.print ("date-format=");
-  Serial.println (date_fmt);
-
-  json.printTo (configFile);
-  return true;
-}
-
-#include "TinyFont.h"
-const byte row0 = 2+0*10;
-const byte row1 = 2+1*10;
-const byte row2 = 2+2*10;
-void wifi_setup ()
-{
-  //-- Config --
-  if (!SPIFFS.begin ()) 
-  {
-    Serial.println ("Failed to mount FS");
-    return;
-  }
-  loadConfig ();
-
-  //-- Display --
-  display.fillScreen (display.color565 (0, 0, 0));
-  display.setTextColor (display.color565 (0, 0, 255));
-
-  //-- WiFiManager --
-  //Local intialization. Once its business is done, there is no need to keep it around
-  WiFiManager wifiManager;
-  wifiManager.setSaveConfigCallback (saveConfigCallback);
-  WiFiManagerParameter timeZoneParameter ("timeZone", "Time Zone", timezone, 5); 
-  wifiManager.addParameter (&timeZoneParameter);
-  WiFiManagerParameter militaryParameter ("military", "24Hr (Y/N)", military, 3); 
-  wifiManager.addParameter (&militaryParameter);
-  WiFiManagerParameter metricParameter ("metric", "Metric Units (Y/N)", u_metric, 3); 
-  wifiManager.addParameter (&metricParameter);
-  WiFiManagerParameter dmydateParameter ("date_fmt", "Date Format (D.M.Y)", date_fmt, 6); 
-  wifiManager.addParameter (&dmydateParameter);
-
-  //-- Double-Reset --
-  if (drd.detectDoubleReset ()) 
-  {
-    Serial.println ("Double Reset Detected");
-
-    display.setCursor (0, row0);
-    display.print ("AP:");
-    display.print (wifiManagerAPName);
-
-    display.setCursor (0, row1);
-    display.print ("Pw:");
-    display.print (wifiManagerAPPassword);
-
-    display.setCursor (0, row2);
-    display.print ("192.168.4.1");
-
-    wifiManager.startConfigPortal (wifiManagerAPName, wifiManagerAPPassword);
-
-    display.fillScreen (display.color565(0, 0, 0));
-  } 
-  else 
-  {
-    Serial.println ("No Double Reset Detected");
-
-    //display.setCursor (2, row1);
-    //display.print ("connecting");
-    TFDrawText (&display, String("   CONNECTING   "), 0, 13, display.color565(0, 0, 255));
-
-    //fetches ssid and pass from eeprom and tries to connect
-    //if it does not connect it starts an access point with the specified name wifiManagerAPName
-    //and goes into a blocking loop awaiting configuration
-    wifiManager.autoConnect (wifiManagerAPName);
-  }
-  
-  Serial.print ("timezone=");
-  Serial.println (timezone);
-  Serial.print ("military=");
-  Serial.println (military);
-  Serial.print ("metric=");
-  Serial.println (u_metric);
-  Serial.print ("date-format=");
-  Serial.println (date_fmt);
-  //timezone
-  strcpy (timezone, timeZoneParameter.getValue ());
-  //military time
-  strcpy (military, militaryParameter.getValue ());
-  //metric units
-  strcpy (u_metric, metricParameter.getValue ());
-  //date format
-  strcpy (date_fmt, dmydateParameter.getValue ());
-  //display.fillScreen (0);
-  //display.setCursor (2, row1);
-  TFDrawText (&display, String("     ONLINE     "), 0, 13, display.color565(0, 0, 255));
-  Serial.print ("WiFi connected, IP address: ");
-  Serial.println (WiFi.localIP ());
-  //
-  //start NTP
-  NTP.begin ("pool.ntp.org", String(timezone).toInt(), false);
-  NTP.setInterval (10);//force rapid sync in 10sec
-
-  if (shouldSaveConfig) 
-  {
-    saveConfig ();
-  }
-  drd.stop ();
-  
-  //delay (1500);
-  getWeather ();
-}
-
 byte hh;
 byte mm;
 byte ss;
@@ -281,13 +87,42 @@ byte ntpsync = 1;
 void setup()
 {	
 	Serial.begin (115200);
+  while (!Serial)
+    delay (500); //delay for Leonardo
   //display setup
   display.begin (16);
 #ifdef ESP8266
   display_ticker.attach (0.002, display_updater);
 #endif
   //
-  wifi_setup ();
+  Serial.println ("");
+  Serial.print ("Connecting");
+  TFDrawText (&display, String ("   CONNECTING   "), 0, 13, display.color565(0, 0, 255));
+  //connect to wifi network
+  WiFi.begin (wifi_ssid, wifi_pass);
+  while (WiFi.status () != WL_CONNECTED)
+  {
+    delay (500);
+    Serial.print(".");
+  }
+  Serial.println ("success!");
+  Serial.print ("IP Address is: ");
+  Serial.println (WiFi.localIP());  //
+  TFDrawText (&display, String("     ONLINE     "), 0, 13, display.color565(0, 0, 255));
+  //
+  Serial.print ("timezone=");
+  Serial.println (timezone);
+  Serial.print ("military=");
+  Serial.println (military);
+  Serial.print ("metric=");
+  Serial.println (u_metric);
+  Serial.print ("date-format=");
+  Serial.println (date_fmt);
+  //delay (1500);
+  getWeather ();
+  //start NTP
+  NTP.begin ("pool.ntp.org", String(timezone).toInt(), false);
+  NTP.setInterval (10);//force rapid sync in 10sec
   //
 	NTP.onNTPSyncEvent ([](NTPSyncEvent_t ntpEvent) 
 	{
@@ -327,11 +162,7 @@ void setup()
   //
 }
 
-//open weather map api key 
-String apiKey   = ""; //e.g a hex string like "abcdef0123456789abcdef0123456789"
-//the city you want the weather for 
-String location = "Muenchen,DE"; //e.g. "Paris,FR"
-char server[]   = "api.openweathermap.org";
+const char server[]   = "api.openweathermap.org";
 WiFiClient client;
 int tempMin = -10000;
 int tempMax = -10000;
@@ -1174,6 +1005,8 @@ byte prevhh = 0;
 byte prevmm = 0;
 byte prevss = 0;
 long tnow;
+#define FIREWORKS_DISPLAY 25//sec
+#define FIREWORKS_LOOP    50//ms
 void loop()
 {
 	static int i = 0;
@@ -1189,11 +1022,11 @@ void loop()
   cm = millis ();
   //
   //fireworks on 1st of Jan 00:00, for 55 seconds
-  if (0 || (month (tnow) == 1 && day (tnow) == 1 && hh == 0 && mm == 0))
+  if (1 && (month (tnow) == 1 && day (tnow) == 1 && hh == 0 && mm == 0))
   {
-    if (ss > 0 && ss < 30)
+    if (ss > 0 && ss < FIREWORKS_DISPLAY)
     {
-      if ((cm - last) > 50)
+      if ((cm - last) > FIREWORKS_LOOP)
       {
         //Serial.println(millis() - last);
         last = cm;
@@ -1301,7 +1134,7 @@ void loop()
       if (m1 != digit3.Value ()) digit3.Morph (m1);
       prevmm = mm;
       //
-//#define SHOW_SOME_LOVE
+#define SHOW_SOME_LOVE
 #ifdef SHOW_SOME_LOVE
       if (mm == 0)
         draw_love ();

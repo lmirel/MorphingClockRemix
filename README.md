@@ -8,7 +8,6 @@ Follow the great tutorial there and eventually use this code as alternative.
 - 12/24h time format
 - date format and display below the clock
 - Morphing clock code/logic is kept almost as is from https://github.com/hwiguna/HariFun_166_Morphing_Clock
-- WiFiManager code/logic is also from https://github.com/hwiguna/HariFun_166_Morphing_Clock - the password for connecting to ESP AP is: MorphClk
 - it uses TinyFont and TinyIcons as my own implementation
 - it uses openweathermap.org so you'll need a free account for the weather data (sync every 5min or so)
   !! you'll need to update the apiKey and location variables (around line 300)
@@ -16,6 +15,7 @@ Follow the great tutorial there and eventually use this code as alternative.
 - it uses animated icons for weather: sunny, cloudy, rainy, thunders, snow, etc.. (not all tested yet)
 - it has night mode from 8pm to 8am when it only shows a moon and 2 twinkling stars and a dimmed display
 - temperature and humidity change color based on (what most might consider) comfortable values
+- fireworks for special ocasions ;-)= adapted for Arduino from https://r3dux.org/2010/10/how-to-create-a-simple-fireworks-effect-in-opengl-and-sdl/
 
 tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
 
