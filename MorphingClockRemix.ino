@@ -13,6 +13,10 @@ provided 'AS IS', use at your own risk
 #define double_buffer
 #include <PxMatrix.h>
 
+//#define USE_ICONS
+//#define USE_FIREWORKS
+//#define USE_WEATHER_ANI
+
 //#include <Adafruit_GFX.h>    // Core graphics library
 //#include <Fonts/FreeMono9pt7b.h>
 
@@ -470,6 +474,7 @@ void getWeather ()
   }//connected
 }
 
+#ifdef USE_ICONS
 #include "TinyIcons.h"
 //icons 10x5: 10 cols, 5 rows
 int moony_ico [50] = {
@@ -481,6 +486,7 @@ int moony_ico [50] = {
   0x0000, 0x0000, 0x4a49, 0x3186, 0x3186, 0x3186, 0x3186, 0x18c3, 0x0000, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int moony1_ico [50] = {
   //3 nuances: 0x18c3 < 0x3186 < 0x4a49
   0x0000, 0x18c3, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -498,6 +504,7 @@ int moony2_ico [50] = {
   0x0000, 0x0000, 0x4a49, 0x4a49, 0x3186, 0x3186, 0x3186, 0x18c3, 0x0000, 0x0000,
   0x0000, 0x0000, 0x4a49, 0x3186, 0x3186, 0x3186, 0x3186, 0x18c3, 0x0000, 0x0000,
 };
+#endif
 
 int sunny_ico [50] = {
   0x0000, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0x0000,
@@ -507,6 +514,7 @@ int sunny_ico [50] = {
   0x0000, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0x0000, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int sunny1_ico [50] = {
   0x0000, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0xffff, 0x0000, 0x0000, 0x0000,
   0x0000, 0xffff, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xffe0, 0x0000,
@@ -522,6 +530,7 @@ int sunny2_ico [50] = {
   0xffff, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0x0000, 0xffe0,
   0x0000, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0x0000, 0x0000,
 };
+#endif
 
 int cloudy_ico [50] = {
   0x0000, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0x0000,
@@ -531,6 +540,7 @@ int cloudy_ico [50] = {
   0x0000, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xc618, 0xc618, 0xc618, 0xc618,
 };
 
+#ifdef USE_WEATHER_ANI
 int cloudy1_ico [50] = {
   0x0000, 0x0000, 0x0000, 0xffff, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0x0000,
   0x0000, 0xffe0, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0xc618, 0xffff, 0x0000,
@@ -546,6 +556,7 @@ int cloudy2_ico [50] = {
   0xffe0, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618,
   0x0000, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xc618, 0xc618, 0xc618, 0xc618,
 };
+#endif
 
 int ovrcst_ico [50] = {
   0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0xc618, 0x0000, 0x0000,
@@ -555,6 +566,7 @@ int ovrcst_ico [50] = {
   0x0000, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int ovrcst1_ico [50] = {
   0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0xc618, 0x0000, 0x0000,
   0x0000, 0x0000, 0xc618, 0xc618, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000,
@@ -570,6 +582,7 @@ int ovrcst2_ico [50] = {
   0x0000, 0xc618, 0xffff, 0xffff, 0xffff, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000,
   0x0000, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000, 0x0000,
 };
+#endif
 
 int thndr_ico [50] = {
   0x041f, 0xc618, 0x041f, 0xc618, 0xc618, 0xc618, 0x041f, 0xc618, 0xc618, 0x041f,
@@ -587,6 +600,7 @@ int rain_ico [50] = {
   0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x041f, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int rain1_ico [50] = {
   0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x041f, 0x0000,
   0x041f, 0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x0000, 0x041f,
@@ -618,6 +632,7 @@ int rain4_ico [50] = {
   0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x041f, 0x0000,
   0x041f, 0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x0000, 0x041f,
 };
+#endif
 
 int snow_ico [50] = {
   0xc618, 0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0x0000, 0xc618,
@@ -627,6 +642,7 @@ int snow_ico [50] = {
   0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0xc618, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int snow1_ico [50] = {
   0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0xc618, 0x0000,
   0xc618, 0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0x0000, 0xc618,
@@ -658,7 +674,9 @@ int snow4_ico [50] = {
   0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0xc618, 0x0000,
   0xc618, 0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0x0000, 0xc618,
 };
+#endif
 
+#ifdef USE_WEATHER_ANI
 int *suny_ani[] = {sunny_ico, sunny1_ico, sunny2_ico, sunny1_ico, sunny2_ico};
 int *clod_ani[] = {cloudy_ico, cloudy1_ico, cloudy2_ico, cloudy1_ico, cloudy2_ico};
 int *ovct_ani[] = {ovrcst_ico, ovrcst1_ico, ovrcst2_ico, ovrcst1_ico, ovrcst2_ico};
@@ -666,7 +684,15 @@ int *rain_ani[] = {rain_ico, rain1_ico, rain2_ico, rain3_ico, rain4_ico};
 int *thun_ani[] = {thndr_ico, rain1_ico, rain2_ico, rain3_ico, rain4_ico};
 int *snow_ani[] = {snow_ico, snow1_ico, snow2_ico, snow3_ico, snow4_ico};
 int *mony_ani[] = {moony_ico, moony1_ico, moony2_ico, moony1_ico, moony2_ico};
-
+#else
+int *suny_ani[] = {sunny_ico, sunny_ico, sunny_ico, sunny_ico, sunny_ico};
+int *clod_ani[] = {cloudy_ico, cloudy_ico, cloudy_ico, cloudy_ico, cloudy_ico};
+int *ovct_ani[] = {ovrcst_ico, ovrcst_ico, ovrcst_ico, ovrcst_ico, ovrcst_ico};
+int *rain_ani[] = {rain_ico, rain_ico, rain_ico, rain_ico, rain_ico};
+int *thun_ani[] = {thndr_ico, rain_ico, rain_ico, rain_ico, rain_ico};
+int *snow_ani[] = {snow_ico, snow_ico, snow_ico, snow_ico, snow_ico};
+int *mony_ani[] = {moony_ico, moony_ico, moony_ico, moony_ico, moony_ico};
+#endif
 /*
  * 
 int ovrcst_ico [50] = {
@@ -693,6 +719,7 @@ int cloudy_ico [50] = {
   0x0000, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000, 0x0000,
 };
  */
+#endif
 
 int xo = 1, yo = 26;
 char use_ani = 0;
@@ -704,7 +731,8 @@ void draw_weather_conditions ()
   Serial.println (condM);
   //cleanup previous cond
   xo = 3*TF_COLS; yo = 1;
-  if (condM == 0 && daytime)
+#ifdef USE_ICONS
+if (condM == 0 && daytime)
   {
     Serial.print ("!weather condition icon unknown, show: ");
     Serial.println (condS);
@@ -755,6 +783,16 @@ void draw_weather_conditions ()
       use_ani = 1;
       break;
   }
+#else
+  xo = 3*TF_COLS; yo = 1;
+  Serial.print ("!weather condition icon unknown, show: ");
+  Serial.println (condS);
+  int cc_dgr = display.color565 (30, 30, 30);
+  //draw the first 5 letters from the unknown weather condition
+  String lstr = condS.substring (0, (condS.length () > 5?5:condS.length ()));
+  lstr.toUpperCase ();
+  TFDrawText (&display, lstr, xo, yo, cc_dgr);
+#endif
 }
 
 void draw_weather ()
@@ -929,6 +967,7 @@ void draw_date ()
 
 void draw_animations (int stp)
 {
+#ifdef USE_ICONS
   //weather icon animation
   int xo = 4*TF_COLS; 
   int yo = 1;
@@ -967,8 +1006,10 @@ void draw_animations (int stp)
     if (af)
       DrawIcon (&display, af, xo, yo, 10, 5);
   }
+#endif
 }
 
+#ifdef USE_FIREWORKS
 //fireworks
 // adapted to Arduino pxMatrix
 // from https://r3dux.org/2010/10/how-to-create-a-simple-fireworks-effect-in-opengl-and-sdl/
@@ -1169,6 +1210,7 @@ void fireworks_loop (int frm)
   }
 }
 //-
+#endif //define USE_FIREWORKS
 
 byte prevhh = 0;
 byte prevmm = 0;
@@ -1188,8 +1230,9 @@ void loop()
   //animations?
   cm = millis ();
   //
+#ifdef USE_FIREWORKS
   //fireworks on 1st of Jan 00:00, for 55 seconds
-  if (0 || (month (tnow) == 1 && day (tnow) == 1 && hh == 0 && mm == 0))
+  if (1 && (month (tnow) == 1 && day (tnow) == 1 && hh == 0 && mm == 0))
   {
     if (ss > 0 && ss < 30)
     {
@@ -1204,6 +1247,8 @@ void loop()
       return;
     }
   }
+#endif //define USE_FIREWORKS
+
   //weather animations
   if ((cm - last) > 150)
   {
