@@ -13,6 +13,8 @@ provided 'AS IS', use at your own risk
 #define double_buffer
 #include <PxMatrix.h>
 
+//#define USE_FIREWORKS
+
 //#include <Adafruit_GFX.h>    // Core graphics library
 //#include <Fonts/FreeMono9pt7b.h>
 
@@ -800,6 +802,8 @@ void draw_animations (int stp)
   }
 }
 
+
+#ifdef USE_FIREWORKS
 //fireworks
 // adapted to Arduino pxMatrix
 // from https://r3dux.org/2010/10/how-to-create-a-simple-fireworks-effect-in-opengl-and-sdl/
@@ -1000,6 +1004,7 @@ void fireworks_loop (int frm)
   }
 }
 //-
+#endif //define USE_FIREWORKS
 
 byte prevhh = 0;
 byte prevmm = 0;
@@ -1021,6 +1026,7 @@ void loop()
   //animations?
   cm = millis ();
   //
+#ifdef USE_FIREWORKS
   //fireworks on 1st of Jan 00:00, for 55 seconds
   if (1 && (month (tnow) == 1 && day (tnow) == 1 && hh == 0 && mm == 0))
   {
@@ -1037,6 +1043,8 @@ void loop()
       return;
     }
   }
+#endif //define USE_FIREWORKS
+
   //weather animations
   if ((cm - last) > 150)
   {
