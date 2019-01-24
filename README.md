@@ -17,6 +17,13 @@ Follow the great tutorial there and eventually use this code as alternative.
 - it has night mode from 8pm to 8am when it only shows a moon and 2 twinkling stars and a dimmed display
 - temperature and humidity change color based on (what most might consider) comfortable values
 
+[Note]: In case you have issues running the WiFi configuration applet, disable ICONS usage.
+//#define USE_ICONS
+//#define USE_FIREWORKS
+//#define USE_WEATHER_ANI
+You can re-enable it after configuration is done.
+Alternatively, you can use the 'no-wm' branch for a static configuration approach.
+
 tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
 
 provided 'AS IS', use at your own risk
