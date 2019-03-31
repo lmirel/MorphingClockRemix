@@ -23,7 +23,16 @@ Follow the great tutorial there and eventually use this code as alternative.
 //#define USE_WEATHER_ANI
 You can re-enable it after configuration is done.
 Alternatively, you can use the 'no-wm' branch for a static configuration approach.
-
+For the 'no-wm' branch, there's a small WEB server for various settings (wip) at http://[esp-ip]/ like below:
+"
+use the following configuration links
+daylight on
+daylight off
+timezone 0
+timezone 1
+timezone 2
+use /timezone/x for specific timezone 'x'
+"
 tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
 
 provided 'AS IS', use at your own risk
