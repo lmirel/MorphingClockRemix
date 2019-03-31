@@ -35,6 +35,8 @@ NtpClientLib by Germán Martín
 //#define USE_WEATHER_ANI
 #define USE_FIREWORKS
 
+#include "FS.h"
+
 #ifdef ESP8266
 #include <Ticker.h>
 Ticker display_ticker;
@@ -105,8 +107,78 @@ byte mm;
 byte ss;
 byte ntpsync = 1;
 const char ntpsvr[]   = "pool.ntp.org";
+//settings
+#define NVARS 15
+#define LVARS 12
+char c_vars [NVARS][LVARS];
+typedef enum e_vars {
+  EV_SSID = 0,
+  EV_SSID2 = 0,
+  EV_PASS,
+  EV_PASS2,
+  EV_TZ,
+  EV_24H,
+  EV_METRIC,
+  EV_DATEFMT,
+  EV_OWMK,
+  EV_OWMK2,
+  EV_OWMK3,
+  EV_GEOLOC,
+  EV_GEOLOC2,
+  EV_GEOLOC3,
+  EV_DST,
+  EV_MAX
+};
+
+bool toBool (String s)
+{
+  return s.equals ("true");
+}
+
+int vars_read ()
+{
+  File varf = SPIFFS.open ("/vars.cfg", "r");
+  if (!varf)
+  {
+    Serial.println ("Failed to open config file");
+    return 0;
+  }
+  //read vars
+  for (int i = 0; i < NVARS; i++)
+    for (int j = 0; j < LVARS; j++)
+      c_vars[i][j] = (char)varf.read ();
+  //
+  for (int i = 0; i < NVARS; i++)
+  {
+    Serial.print ("var ");
+    Serial.print (i);
+    Serial.print (": ");
+    Serial.println (c_vars[i]);
+  }
+  //
+  varf.close ();
+  return 1;
+}
+
+int vars_write ()
+{
+  File varf = SPIFFS.open ("/vars.cfg", "w");
+  if (!varf)
+  {
+    Serial.println ("Failed to open config file");
+    return 0;
+  }
+  //read vars
+  for (int i = 0; i < NVARS; i++)
+    for (int j = 0; j < LVARS; j++)
+      if (varf.write (c_vars[i][j]) != 1)
+        Serial.println ("error writing var");
+  //
+  varf.close ();
+  return 1;
+}
 //
-void setup()
+void setup ()
 {	
 	Serial.begin (115200);
   while (!Serial)
@@ -132,18 +204,37 @@ void setup()
   Serial.println (WiFi.localIP ());  //
   TFDrawText (&display, String("     ONLINE     "), 0, 13, display.color565(0, 0, 255));
   //
+  if (SPIFFS.begin ())
+  {
+    Serial.println ("SPIFFS Initialize....ok");
+    if (!vars_read ())
+    {
+      //init vars
+      strcpy (c_vars[EV_TZ], timezone);
+      strcpy (c_vars[EV_24H], military);
+      strcpy (c_vars[EV_METRIC], u_metric);
+      strcpy (c_vars[EV_DATEFMT], date_fmt);
+      strcpy (c_vars[EV_DST], "false");
+    }
+  }
+  else
+  {
+    Serial.println ("SPIFFS Initialization...failed");
+  }  //
   Serial.print ("timezone=");
-  Serial.println (timezone);
+  Serial.println (c_vars[EV_TZ]);
   Serial.print ("military=");
-  Serial.println (military);
+  Serial.println (c_vars[EV_24H]);
   Serial.print ("metric=");
-  Serial.println (u_metric);
+  Serial.println (c_vars[EV_METRIC]);
   Serial.print ("date-format=");
-  Serial.println (date_fmt);
+  Serial.println (c_vars[EV_DATEFMT]);
+  Serial.print ("dst=");
+  Serial.println (c_vars[EV_DST]);
   //delay (1500);
   getWeather ();
   //start NTP
-  NTP.begin (ntpsvr, String(timezone).toInt(), false);
+  NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt(), toBool (String (c_vars[EV_DST])));
   NTP.setInterval (10);//force rapid sync in 10sec
   //
 	NTP.onNTPSyncEvent ([](NTPSyncEvent_t ntpEvent) 
@@ -1068,15 +1159,14 @@ long tnow;
 #define FIREWORKS_DISPLAY 10//sec
 #define FIREWORKS_LOOP    50//ms
 WiFiClient httpcli;
-bool tdl = false;
-void loop ()
+
+//handle web server requests
+void web_server ()
 {
-	static int i = 0;
-	static int last = 0;
-  static int cm;
   httpcli = httpsvr.available ();
   if (httpcli) 
   {
+    char svf = 0;
     //Read what the browser has sent into a String class and print the request to the monitor
     String httprq = httpcli.readString ();
     //Looking under the hood
@@ -1088,17 +1178,19 @@ void loop ()
     httprsp += "<!DOCTYPE HTML>\r\n<html>\r\n";
     if (httprq.indexOf ("/daylight/on ") != -1)
     {
-      tdl = true;
-      NTP.begin (ntpsvr, String (timezone).toInt (), tdl);
+      strcpy (c_vars[EV_DST], "true");
+      NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt (), toBool(String (c_vars[EV_DST])));
       httprsp += "<strong>daylight: on</strong><br>";
       Serial.println ("daylight ON");
+      svf = 1;
     }
     else if (httprq.indexOf ("/daylight/off ") != -1)
     {
-      tdl = false;
-      NTP.begin (ntpsvr, String (timezone).toInt (), tdl);
+      strcpy (c_vars[EV_DST], "false");
+      NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt (), toBool(String (c_vars[EV_DST])));
       httprsp += "<strong>daylight: off</strong><br>";
       Serial.println ("daylight OFF");
+      svf = 1;
     }
     else if ((pidx = httprq.indexOf ("/timezone/")) != -1)
     {
@@ -1106,10 +1198,13 @@ void loop ()
       if (pidx2 != -1)
       {
         String tz = httprq.substring (pidx + 10, pidx2);
-        NTP.begin (ntpsvr, tz.toInt (), tdl);
+        //strcpy (timezone, tz.c_str ());
+        strcpy (c_vars[EV_TZ], tz.c_str ());
+        NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt (), toBool(String (c_vars[EV_DST])));
         httprsp += "<strong>timezone:" + tz + "</strong><br>";
         Serial.print ("timezone: ");
-        Serial.println (tz);
+        Serial.println (c_vars[EV_TZ]);
+        svf = 1;
       }
       else
       {
@@ -1124,13 +1219,35 @@ void loop ()
     httprsp += "<a href='/timezone/0'>timezone 0</a><br>";
     httprsp += "<a href='/timezone/1'>timezone 1</a><br>";
     httprsp += "<a href='/timezone/2'>timezone 2</a><br>";
-    httprsp += "use /timezone/x' for specific timezone 'x'<br>";
+    httprsp += "use /timezone/x for timezone 'x'<br>";
+    httprsp += "<br><br>";
+    httprsp += "current configuration<br>";
+    httprsp += "daylight: " + String (c_vars[EV_DST]) + "<br>";
+    httprsp += "timezone: " + String (c_vars[EV_TZ]) + "<br>";
+    httprsp += "<br><a href='/'>home</a><br>";
     httprsp += "</html>\r\n";
     httpcli.flush (); //clear previous info in the stream
     httpcli.print (httprsp); // Send the response to the client
     delay (1);
-    Serial.println ("Client disonnected"); //Looking under the hood
+    //save settings?
+    if (svf)
+    {
+      if (vars_write () > 0)
+        Serial.println ("variables stored");
+      else
+        Serial.println ("variables storing failed");
+    }
+    Serial.println ("Client disonnected");
   }
+}
+
+void loop ()
+{
+	static int i = 0;
+	static int last = 0;
+  static int cm;
+  //handle web server requests
+  web_server ();
   //time changes every miliseconds, we only want to draw when digits actually change
   tnow = now ();
   //
