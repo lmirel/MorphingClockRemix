@@ -4,7 +4,25 @@ follow the great tutorial there and eventually use this code as alternative
 
 provided 'AS IS', use at your own risk
  * mirel.t.lazar@gmail.com
- */
+ * 
+ * 
+We also need ESP8266 support
+Close Manage Libraries, but stay in Arduino IDE
+Go to File > Preferences
+Click the icon to the right of Additional Board Manager URLs
+Paste this URL on a separate line (sequence does not matter).
+http://arduino.esp8266.com/stable/package_esp8266com_index.json
+Click Ok to get out of Preferences
+Navigate to: Tools > Board xyz > Board Manager...
+Search for 8266
+Install esp8266 by ESP8266 Community.
+
+in case of errors related to NTP or time:
+To get past these errors you need to install these library's:
+NTPClient by Fabrice Weinberg
+Time by Michael Margolis
+NtpClientLib by Germán Martín
+*/
 
 #include <TimeLib.h>
 #include <NtpClientLib.h>
@@ -13,10 +31,9 @@ provided 'AS IS', use at your own risk
 #define double_buffer
 #include <PxMatrix.h>
 
-//#define USE_FIREWORKS
-
-//#include <Adafruit_GFX.h>    // Core graphics library
-//#include <Fonts/FreeMono9pt7b.h>
+//#define USE_ICONS
+//#define USE_WEATHER_ANI
+#define USE_FIREWORKS
 
 #ifdef ESP8266
 #include <Ticker.h>
@@ -29,6 +46,8 @@ Ticker display_ticker;
 #define P_E 0
 #define P_OE 2
 #endif
+
+WiFiServer httpsvr (80); //Initialize the server on Port 80
 
 // Pins for LED MATRIX
 PxMATRIX display(64, 32, P_LAT, P_OE, P_A, P_B, P_C, P_D, P_E);
@@ -85,6 +104,7 @@ byte hh;
 byte mm;
 byte ss;
 byte ntpsync = 1;
+const char ntpsvr[]   = "pool.ntp.org";
 //
 void setup()
 {	
@@ -109,7 +129,7 @@ void setup()
   }
   Serial.println ("success!");
   Serial.print ("IP Address is: ");
-  Serial.println (WiFi.localIP());  //
+  Serial.println (WiFi.localIP ());  //
   TFDrawText (&display, String("     ONLINE     "), 0, 13, display.color565(0, 0, 255));
   //
   Serial.print ("timezone=");
@@ -123,7 +143,7 @@ void setup()
   //delay (1500);
   getWeather ();
   //start NTP
-  NTP.begin ("pool.ntp.org", String(timezone).toInt(), false);
+  NTP.begin (ntpsvr, String(timezone).toInt(), false);
   NTP.setInterval (10);//force rapid sync in 10sec
   //
 	NTP.onNTPSyncEvent ([](NTPSyncEvent_t ntpEvent) 
@@ -162,6 +182,7 @@ void setup()
   Serial.print (display.color565 (255, 255, 255));
   Serial.println ("]");
   //
+  httpsvr.begin (); // Start the HTTP Server
 }
 
 const char server[]   = "api.openweathermap.org";
@@ -303,6 +324,7 @@ void getWeather ()
   }//connected
 }
 
+#ifdef USE_ICONS
 #include "TinyIcons.h"
 //icons 10x5: 10 cols, 5 rows
 int moony_ico [50] = {
@@ -314,6 +336,7 @@ int moony_ico [50] = {
   0x0000, 0x0000, 0x4a49, 0x3186, 0x3186, 0x3186, 0x3186, 0x18c3, 0x0000, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int moony1_ico [50] = {
   //3 nuances: 0x18c3 < 0x3186 < 0x4a49
   0x0000, 0x18c3, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -331,6 +354,7 @@ int moony2_ico [50] = {
   0x0000, 0x0000, 0x4a49, 0x4a49, 0x3186, 0x3186, 0x3186, 0x18c3, 0x0000, 0x0000,
   0x0000, 0x0000, 0x4a49, 0x3186, 0x3186, 0x3186, 0x3186, 0x18c3, 0x0000, 0x0000,
 };
+#endif
 
 int sunny_ico [50] = {
   0x0000, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0x0000,
@@ -340,6 +364,7 @@ int sunny_ico [50] = {
   0x0000, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0x0000, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int sunny1_ico [50] = {
   0x0000, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0xffff, 0x0000, 0x0000, 0x0000,
   0x0000, 0xffff, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xffe0, 0x0000,
@@ -355,6 +380,7 @@ int sunny2_ico [50] = {
   0xffff, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0x0000, 0xffe0,
   0x0000, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0x0000, 0x0000,
 };
+#endif
 
 int cloudy_ico [50] = {
   0x0000, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0x0000,
@@ -364,6 +390,7 @@ int cloudy_ico [50] = {
   0x0000, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xc618, 0xc618, 0xc618, 0xc618,
 };
 
+#ifdef USE_WEATHER_ANI
 int cloudy1_ico [50] = {
   0x0000, 0x0000, 0x0000, 0xffff, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0x0000,
   0x0000, 0xffe0, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0xc618, 0xffff, 0x0000,
@@ -379,6 +406,7 @@ int cloudy2_ico [50] = {
   0xffe0, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618,
   0x0000, 0x0000, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xc618, 0xc618, 0xc618, 0xc618,
 };
+#endif
 
 int ovrcst_ico [50] = {
   0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0xc618, 0x0000, 0x0000,
@@ -388,6 +416,7 @@ int ovrcst_ico [50] = {
   0x0000, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int ovrcst1_ico [50] = {
   0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0xc618, 0x0000, 0x0000,
   0x0000, 0x0000, 0xc618, 0xc618, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000,
@@ -403,6 +432,7 @@ int ovrcst2_ico [50] = {
   0x0000, 0xc618, 0xffff, 0xffff, 0xffff, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000,
   0x0000, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000, 0x0000,
 };
+#endif
 
 int thndr_ico [50] = {
   0x041f, 0xc618, 0x041f, 0xc618, 0xc618, 0xc618, 0x041f, 0xc618, 0xc618, 0x041f,
@@ -420,6 +450,7 @@ int rain_ico [50] = {
   0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x041f, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int rain1_ico [50] = {
   0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x041f, 0x0000,
   0x041f, 0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x0000, 0x041f,
@@ -451,6 +482,7 @@ int rain4_ico [50] = {
   0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x041f, 0x0000,
   0x041f, 0x0000, 0x041f, 0x0000, 0x0000, 0x0000, 0x041f, 0x0000, 0x0000, 0x041f,
 };
+#endif
 
 int snow_ico [50] = {
   0xc618, 0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0x0000, 0xc618,
@@ -460,6 +492,7 @@ int snow_ico [50] = {
   0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0xc618, 0x0000,
 };
 
+#ifdef USE_WEATHER_ANI
 int snow1_ico [50] = {
   0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0xc618, 0x0000,
   0xc618, 0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0x0000, 0xc618,
@@ -491,7 +524,9 @@ int snow4_ico [50] = {
   0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0xc618, 0x0000,
   0xc618, 0x0000, 0xc618, 0x0000, 0x0000, 0x0000, 0xc618, 0x0000, 0x0000, 0xc618,
 };
+#endif
 
+#ifdef USE_WEATHER_ANI
 int *suny_ani[] = {sunny_ico, sunny1_ico, sunny2_ico, sunny1_ico, sunny2_ico};
 int *clod_ani[] = {cloudy_ico, cloudy1_ico, cloudy2_ico, cloudy1_ico, cloudy2_ico};
 int *ovct_ani[] = {ovrcst_ico, ovrcst1_ico, ovrcst2_ico, ovrcst1_ico, ovrcst2_ico};
@@ -499,7 +534,15 @@ int *rain_ani[] = {rain_ico, rain1_ico, rain2_ico, rain3_ico, rain4_ico};
 int *thun_ani[] = {thndr_ico, rain1_ico, rain2_ico, rain3_ico, rain4_ico};
 int *snow_ani[] = {snow_ico, snow1_ico, snow2_ico, snow3_ico, snow4_ico};
 int *mony_ani[] = {moony_ico, moony1_ico, moony2_ico, moony1_ico, moony2_ico};
-
+#else
+int *suny_ani[] = {sunny_ico, sunny_ico, sunny_ico, sunny_ico, sunny_ico};
+int *clod_ani[] = {cloudy_ico, cloudy_ico, cloudy_ico, cloudy_ico, cloudy_ico};
+int *ovct_ani[] = {ovrcst_ico, ovrcst_ico, ovrcst_ico, ovrcst_ico, ovrcst_ico};
+int *rain_ani[] = {rain_ico, rain_ico, rain_ico, rain_ico, rain_ico};
+int *thun_ani[] = {thndr_ico, rain_ico, rain_ico, rain_ico, rain_ico};
+int *snow_ani[] = {snow_ico, snow_ico, snow_ico, snow_ico, snow_ico};
+int *mony_ani[] = {moony_ico, moony_ico, moony_ico, moony_ico, moony_ico};
+#endif
 /*
  * 
 int ovrcst_ico [50] = {
@@ -509,7 +552,6 @@ int ovrcst_ico [50] = {
   0xc618, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xc618,
   0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000,
 };
-
 int ovrcst_ico [50] = {
   0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xc618, 0xc618, 0x0000, 0x0000,
   0x0000, 0x0000, 0xc618, 0xc618, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000,
@@ -517,7 +559,6 @@ int ovrcst_ico [50] = {
   0x0000, 0xc618, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xc618, 0x0000,
   0x0000, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000, 0x0000,
 };
-
 int cloudy_ico [50] = {
   0x0000, 0x0000, 0x0000, 0xffe0, 0x0000, 0x0000, 0xffe0, 0xc618, 0x0000, 0x0000,
   0x0000, 0xffe0, 0xc618, 0xc618, 0x0000, 0xc618, 0xc618, 0xc618, 0xffe0, 0x0000,
@@ -526,6 +567,7 @@ int cloudy_ico [50] = {
   0x0000, 0x0000, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0xc618, 0x0000, 0x0000,
 };
  */
+#endif
 
 int xo = 1, yo = 26;
 char use_ani = 0;
@@ -537,6 +579,7 @@ void draw_weather_conditions ()
   Serial.println (condM);
   //cleanup previous cond
   xo = 3*TF_COLS; yo = 1;
+#ifdef USE_ICONS
   if (condM == 0 && daytime)
   {
     Serial.print ("!weather condition icon unknown, show: ");
@@ -588,6 +631,16 @@ void draw_weather_conditions ()
       use_ani = 1;
       break;
   }
+#else
+  xo = 3*TF_COLS; yo = 1;
+  Serial.print ("!weather condition icon unknown, show: ");
+  Serial.println (condS);
+  int cc_dgr = display.color565 (30, 30, 30);
+  //draw the first 5 letters from the unknown weather condition
+  String lstr = condS.substring (0, (condS.length () > 5?5:condS.length ()));
+  lstr.toUpperCase ();
+  TFDrawText (&display, lstr, xo, yo, cc_dgr);
+#endif
 }
 
 void draw_weather ()
@@ -660,10 +713,10 @@ void draw_weather ()
       TFDrawText (&display, "   ", xo, yo, 0);
       lstr = String (tempMin);// + String((*u_metric=='Y')?"C":"F");
       //blue if negative
-      int ct = cc_dgr;
+      int ct = cc_blu;
       if (tempMin < 0)
       {
-        ct = cc_blu;
+        ct = cc_dgr;
         lstr = String (-tempMin);// + String((*u_metric=='Y')?"C":"F");
       }
       Serial.print ("temp min: ");
@@ -681,10 +734,10 @@ void draw_weather ()
         xo = 13*TF_COLS;
       lstr = String (tempMax);// + String((*u_metric=='Y')?"C":"F");
       //blue if negative
-      int ct = cc_dgr;
+      int ct = cc_blu;
       if (tempMax < 0)
       {
-        ct = cc_blu;
+        ct = cc_dgr;
         lstr = String (-tempMax);// + String((*u_metric=='Y')?"C":"F");
       }
       Serial.print ("temp max: ");
@@ -728,7 +781,7 @@ void draw_date ()
   //for (int i = 0 ; i < 12; i++)
     //TFDrawChar (&display, '0' + i%10, xo + i * 5, yo, display.color565 (0, 255, 0));
   //date below the clock
-  long tnow = now();
+  long tnow = now ();
   String lstr = "";
   for (int i = 0; i < 5; i += 2)
   {
@@ -752,7 +805,7 @@ void draw_date ()
     }
   }
   //
-  if (lstr.length())
+  if (lstr.length ())
   {
     //
     xo = 3*TF_COLS; yo = 26;
@@ -762,7 +815,8 @@ void draw_date ()
 
 void draw_animations (int stp)
 {
-  //weather icon animation
+#ifdef USE_ICONS
+//weather icon animation
   int xo = 4*TF_COLS; 
   int yo = 1;
   //0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
@@ -800,6 +854,7 @@ void draw_animations (int stp)
     if (af)
       DrawIcon (&display, af, xo, yo, 10, 5);
   }
+#endif
 }
 
 
@@ -1010,13 +1065,72 @@ byte prevhh = 0;
 byte prevmm = 0;
 byte prevss = 0;
 long tnow;
-#define FIREWORKS_DISPLAY 25//sec
+#define FIREWORKS_DISPLAY 10//sec
 #define FIREWORKS_LOOP    50//ms
-void loop()
+WiFiClient httpcli;
+bool tdl = false;
+void loop ()
 {
 	static int i = 0;
 	static int last = 0;
   static int cm;
+  httpcli = httpsvr.available ();
+  if (httpcli) 
+  {
+    //Read what the browser has sent into a String class and print the request to the monitor
+    String httprq = httpcli.readString ();
+    //Looking under the hood
+    Serial.println (httprq);
+    int pidx = -1;
+    //
+    String httprsp = "HTTP/1.1 200 OK\r\n";
+    httprsp += "Content-type: text/html\r\n\r\n";
+    httprsp += "<!DOCTYPE HTML>\r\n<html>\r\n";
+    if (httprq.indexOf ("/daylight/on ") != -1)
+    {
+      tdl = true;
+      NTP.begin (ntpsvr, String (timezone).toInt (), tdl);
+      httprsp += "<strong>daylight: on</strong><br>";
+      Serial.println ("daylight ON");
+    }
+    else if (httprq.indexOf ("/daylight/off ") != -1)
+    {
+      tdl = false;
+      NTP.begin (ntpsvr, String (timezone).toInt (), tdl);
+      httprsp += "<strong>daylight: off</strong><br>";
+      Serial.println ("daylight OFF");
+    }
+    else if ((pidx = httprq.indexOf ("/timezone/")) != -1)
+    {
+      int pidx2 = httprq.indexOf (" ", pidx + 10);
+      if (pidx2 != -1)
+      {
+        String tz = httprq.substring (pidx + 10, pidx2);
+        NTP.begin (ntpsvr, tz.toInt (), tdl);
+        httprsp += "<strong>timezone:" + tz + "</strong><br>";
+        Serial.print ("timezone: ");
+        Serial.println (tz);
+      }
+      else
+      {
+        httprsp += "<strong>!invalid timezone!</strong><br>";
+        Serial.print ("invalid timezone");
+      }
+    }
+    //
+    httprsp += "<br><br>use the following configuration links<br>";
+    httprsp += "<a href='/daylight/on'>daylight on</a><br>";
+    httprsp += "<a href='/daylight/off'>daylight off</a><br>";
+    httprsp += "<a href='/timezone/0'>timezone 0</a><br>";
+    httprsp += "<a href='/timezone/1'>timezone 1</a><br>";
+    httprsp += "<a href='/timezone/2'>timezone 2</a><br>";
+    httprsp += "use /timezone/x' for specific timezone 'x'<br>";
+    httprsp += "</html>\r\n";
+    httpcli.flush (); //clear previous info in the stream
+    httpcli.print (httprsp); // Send the response to the client
+    delay (1);
+    Serial.println ("Client disonnected"); //Looking under the hood
+  }
   //time changes every miliseconds, we only want to draw when digits actually change
   tnow = now ();
   //
@@ -1028,9 +1142,9 @@ void loop()
   //
 #ifdef USE_FIREWORKS
   //fireworks on 1st of Jan 00:00, for 55 seconds
-  if (1 && (month (tnow) == 1 && day (tnow) == 1 && hh == 0 && mm == 0))
+  if (1 || (month (tnow) == 1 && day (tnow) == 1))
   {
-    if (ss > 0 && ss < FIREWORKS_DISPLAY)
+    if ((hh == 0 && mm == 0) && (ss > 0 && ss < FIREWORKS_DISPLAY))
     {
       if ((cm - last) > FIREWORKS_LOOP)
       {
@@ -1181,4 +1295,3 @@ void loop()
   //
 	//delay (0);
 }
-
