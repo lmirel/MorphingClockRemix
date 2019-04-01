@@ -24,7 +24,8 @@ Follow the great tutorial there and eventually use this code as alternative.
 You can re-enable it after configuration is done.
 <br>
 Alternatively, you can use the 'no-wm' branch for a static configuration approach.
-- For the 'no-wm' branch, there's a small WEB server for various settings (wip) at http://[esp-ip]/ like below:
+<br>
+For the 'no-wm' branch, there's a small WEB server for various settings (wip) at http://[esp-ip]/ like below:
 
 "
 use the following configuration links
