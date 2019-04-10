@@ -17,6 +17,30 @@ Follow the great tutorial there and eventually use this code as alternative.
 - temperature and humidity change color based on (what most might consider) comfortable values
 - fireworks for special ocasions ;-)= adapted for Arduino from https://r3dux.org/2010/10/how-to-create-a-simple-fireworks-effect-in-opengl-and-sdl/
 
-tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
+[Note]: In case you have issues running the WiFi configuration applet, disable ICONS usage.
 
+- #define USE_ICONS
+- #define USE_FIREWORKS
+- #define USE_WEATHER_ANI You can re-enable it after configuration is done.
+The 'no-wm' branch uses a static configuration approach.
+<br>
+- Use the small WEB server for various settings (wip) at http://[esp-ip]/ like below:
+<br>
+use the following configuration links
+<br>
+daylight on
+<br>
+daylight off
+<br>
+timezone 0
+<br>
+timezone 1
+<br>
+timezone 2
+<br>
+use /timezone/x for specific timezone 'x'
+<br>
+<br>
+tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
+<br>
 provided 'AS IS', use at your own risk
