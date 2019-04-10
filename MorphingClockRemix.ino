@@ -231,8 +231,6 @@ void setup ()
   Serial.println (c_vars[EV_DATEFMT]);
   Serial.print ("dst=");
   Serial.println (c_vars[EV_DST]);
-  //delay (1500);
-  getWeather ();
   //start NTP
   NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt(), toBool (String (c_vars[EV_DST])));
   NTP.setInterval (10);//force rapid sync in 10sec
@@ -254,6 +252,10 @@ void setup ()
       ntpsync = 1;
 		}
 	});
+  //
+  httpsvr.begin (); // Start the HTTP Server
+  //delay (1500);
+  getWeather ();
   //prep screen for clock display
   display.fillScreen (0);
   int cc_gry = display.color565 (128, 128, 128);
@@ -272,8 +274,6 @@ void setup ()
   Serial.print (" .. ");
   Serial.print (display.color565 (255, 255, 255));
   Serial.println ("]");
-  //
-  httpsvr.begin (); // Start the HTTP Server
 }
 
 const char server[]   = "api.openweathermap.org";
@@ -1192,6 +1192,17 @@ void web_server ()
       Serial.println ("daylight OFF");
       svf = 1;
     }
+    else if ((pidx = httprq.indexOf ("/brightness/")) != -1)
+    {
+      int pidx2 = httprq.indexOf (" ", pidx + 12);
+      if (pidx2 != -1)
+      {
+        String bri = httprq.substring (pidx + 12, pidx2);
+        display.setBrightness (bri.toInt ());
+        Serial.print (">brightness: ");
+        Serial.println (bri);
+      }
+    }
     else if ((pidx = httprq.indexOf ("/timezone/")) != -1)
     {
       int pidx2 = httprq.indexOf (" ", pidx + 10);
@@ -1220,6 +1231,11 @@ void web_server ()
     httprsp += "<a href='/timezone/1'>timezone 1</a><br>";
     httprsp += "<a href='/timezone/2'>timezone 2</a><br>";
     httprsp += "use /timezone/x for timezone 'x'<br>";
+    httprsp += "<a href='/brightness/10'>brightness 10</a><br>";
+    httprsp += "<a href='/brightness/50'>brightness 50</a><br>";
+    httprsp += "<a href='/brightness/100'>brightness 100</a><br>";
+    httprsp += "<a href='/brightness/200'>brightness 200</a><br>";
+    httprsp += "use /brightness/x for display brightness 'x' from 0 (darkest) to 255 (brightest)<br>";
     httprsp += "<br><br>";
     httprsp += "current configuration<br>";
     httprsp += "daylight: " + String (c_vars[EV_DST]) + "<br>";
