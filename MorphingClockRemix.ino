@@ -107,12 +107,13 @@ void display_updater ()
 #endif
 
 void getWeather ();
-
+char ap_mode = 0;
 byte hh;
 byte mm;
 byte ss;
 byte ntpsync = 1;
 const char ntpsvr[] = "pool.ntp.org";
+const char softap[] = "esp-weather";
 //settings
 #define NVARS 15
 #define LVARS 12
@@ -246,16 +247,11 @@ void setup ()
   if (c_vars[EV_SSID][0] == '\0')
   {
     //start AP mode
+    ap_mode = 1;
     display.fillScreen (0);
     TFDrawText (&display, String ("     SETUP      "), 0, 13, display.color565(0, 0, 255));
-    WiFi.softAP("esp-weather", "esp-weather");
-    while (WiFi.status () != WL_CONNECTED)
-    {
-      delay (500);
-      debug_print(".");
-    }
-    debug_println ("success!");
-    debug_print("Server IP address: ");
+    WiFi.softAP(softap, softap);
+    debug_print("AP Server IP address: ");
     debug_println(WiFi.softAPIP());
     debug_print("Server MAC address: ");
     debug_println(WiFi.softAPmacAddress());
@@ -803,6 +799,16 @@ void draw_weather ()
   debug_println ("showing the weather");
   xo = 0; yo = 1;
   TFDrawText (&display, String("                   "), xo, yo, cc_dgr);
+  //
+  if (ap_mode)
+  {
+    //show AP ip
+    String lap = String(softap);
+    lap.toUpperCase();
+    TFDrawText (&display, lap, xo, yo, display.color565 (20, 20, 20));
+    return;
+  }
+  //
   if (tempM == -10000 || humiM == -10000 || presM == -10000)
   {
     //TFDrawText (&display, String("NO WEATHER DATA"), xo, yo, cc_dgr);
@@ -927,7 +933,16 @@ void draw_love ()
 void draw_date ()
 {
   int cc_grn = display.color565 (0, cin, 0);
+  xo = 3*TF_COLS; yo = 26;
   debug_println ("showing the date");
+  //
+  if (ap_mode)
+  {
+    //show AP ip
+    xo = 0;
+    TFDrawText (&display, WiFi.softAPIP().toString(), xo, yo, display.color565 (20, 20, 20));
+    return;
+  }
   //for (int i = 0 ; i < 12; i++)
     //TFDrawChar (&display, '0' + i%10, xo + i * 5, yo, display.color565 (0, 255, 0));
   //date below the clock
@@ -958,7 +973,6 @@ void draw_date ()
   if (lstr.length ())
   {
     //
-    xo = 3*TF_COLS; yo = 26;
     TFDrawText (&display, lstr, xo, yo, cc_grn);
   }
 }
