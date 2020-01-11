@@ -24,6 +24,11 @@ Time 1.5 by Michael Margolis https://github.com/PaulStoffregen/Time
 NtpClientLib 3.0.2-beta by Germán Martín https://github.com/gmag11/NtpClient
 PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 */
+#define DEBUG 1
+#define debug_println(...) \
+            do { if (DEBUG) Serial.println(__VA_ARGS__); } while (0)
+#define debug_print(...) \
+            do { if (DEBUG) Serial.print(__VA_ARGS__); } while (0)
 
 #include <TimeLib.h>
 #include <NtpClientLib.h>
@@ -107,7 +112,7 @@ byte hh;
 byte mm;
 byte ss;
 byte ntpsync = 1;
-const char ntpsvr[]   = "pool.ntp.org";
+const char ntpsvr[] = "pool.ntp.org";
 //settings
 #define NVARS 15
 #define LVARS 12
@@ -141,7 +146,7 @@ int vars_read ()
   File varf = SPIFFS.open ("/vars.cfg", "r");
   if (!varf)
   {
-    Serial.println ("Failed to open config file");
+    debug_println ("Failed to open config file");
     return 0;
   }
   //read vars
@@ -151,10 +156,10 @@ int vars_read ()
   //
   for (int i = 0; i < NVARS; i++)
   {
-    Serial.print ("var ");
-    Serial.print (i);
-    Serial.print (": ");
-    Serial.println (c_vars[i]);
+    debug_print ("var ");
+    debug_print (i);
+    debug_print (": ");
+    debug_println (c_vars[i]);
   }
   //
   varf.close ();
@@ -166,14 +171,22 @@ int vars_write ()
   File varf = SPIFFS.open ("/vars.cfg", "w");
   if (!varf)
   {
-    Serial.println ("Failed to open config file");
+    debug_println ("Failed to open config file");
     return 0;
   }
-  //read vars
+  //
+  for (int i = 0; i < NVARS; i++)
+  {
+    debug_print ("var ");
+    debug_print (i);
+    debug_print (": ");
+    debug_println (c_vars[i]);
+  }
+  //write vars
   for (int i = 0; i < NVARS; i++)
     for (int j = 0; j < LVARS; j++)
       if (varf.write (c_vars[i][j]) != 1)
-        Serial.println ("error writing var");
+        debug_println ("error writing var");
   //
   varf.close ();
   return 1;
@@ -189,25 +202,11 @@ void setup ()
 #ifdef ESP8266
   display_ticker.attach (0.002, display_updater);
 #endif
-  //
-  Serial.println ("");
-  Serial.print ("Connecting");
-  TFDrawText (&display, String ("   CONNECTING   "), 0, 13, display.color565(0, 0, 255));
-  //connect to wifi network
-  WiFi.begin (wifi_ssid, wifi_pass);
-  while (WiFi.status () != WL_CONNECTED)
-  {
-    delay (500);
-    Serial.print(".");
-  }
-  Serial.println ("success!");
-  Serial.print ("IP Address is: ");
-  Serial.println (WiFi.localIP ());  //
-  TFDrawText (&display, String("     ONLINE     "), 0, 13, display.color565(0, 0, 255));
-  //
+  //read variables
+  int cstore = 0;
   if (SPIFFS.begin ())
   {
-    Serial.println ("SPIFFS Initialize....ok");
+    debug_println ("SPIFFS Initialize....ok");
     if (!vars_read ())
     {
       //init vars
@@ -218,63 +217,120 @@ void setup ()
       strcpy (c_vars[EV_DST], "false");
     }
   }
+  //configuration check and write
+  if (c_vars[EV_SSID][0] == '\0')
+  {
+    cstore++;
+    strncpy(c_vars[EV_SSID], wifi_ssid, LVARS * 2);
+  }
+  if (c_vars[EV_PASS][0] == '\0')
+  {
+    cstore++;
+    strncpy(c_vars[EV_PASS], wifi_pass, LVARS * 2);
+  }
+  if (c_vars[EV_OWMK][0] == '\0')
+  {
+    cstore++;
+    strncpy(c_vars[EV_OWMK], apiKey.c_str(), LVARS * 3);
+  }
+  //
+  if (cstore)
+  {
+    if (vars_write () > 0)
+      debug_println ("variables stored");
+    else
+      debug_println ("variables storing failed");
+  }
+  //do we need wifi configuration?
+  c_vars[EV_SSID][0] = '\0';
+  if (c_vars[EV_SSID][0] == '\0')
+  {
+    //start AP mode
+    display.fillScreen (0);
+    TFDrawText (&display, String ("     SETUP      "), 0, 13, display.color565(0, 0, 255));
+    WiFi.softAP("esp-weather", "esp-weather");
+    while (WiFi.status () != WL_CONNECTED)
+    {
+      delay (500);
+      debug_print(".");
+    }
+    debug_println ("success!");
+    debug_print("Server IP address: ");
+    debug_println(WiFi.softAPIP());
+    debug_print("Server MAC address: ");
+    debug_println(WiFi.softAPmacAddress());
+  }
   else
   {
-    Serial.println ("SPIFFS Initialization...failed");
-  }  //
-  Serial.print ("timezone=");
-  Serial.println (c_vars[EV_TZ]);
-  Serial.print ("military=");
-  Serial.println (c_vars[EV_24H]);
-  Serial.print ("metric=");
-  Serial.println (c_vars[EV_METRIC]);
-  Serial.print ("date-format=");
-  Serial.println (c_vars[EV_DATEFMT]);
-  Serial.print ("dst=");
-  Serial.println (c_vars[EV_DST]);
-  //start NTP
-  NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt(), toBool (String (c_vars[EV_DST])));
-  NTP.setInterval (10);//force rapid sync in 10sec
-  //
-	NTP.onNTPSyncEvent ([](NTPSyncEvent_t ntpEvent) 
-	{
-		if (ntpEvent) 
-		{
-			Serial.print ("Time Sync error: ");
-			if (ntpEvent == noResponse)
-				Serial.println ("NTP server not reachable");
-			else if (ntpEvent == invalidAddress)
-				Serial.println ("Invalid NTP server address");
-		}
-		else 
-		{
-			Serial.print ("Got NTP time: ");
-			Serial.println (NTP.getTimeDateString (NTP.getLastNTPSync ()));
-      ntpsync = 1;
-		}
-	});
+    //start client mode
+    debug_print ("Connecting");
+    TFDrawText (&display, String ("   CONNECTING   "), 0, 13, display.color565(0, 0, 255));
+    //connect to wifi network
+    WiFi.begin (c_vars[EV_SSID], c_vars[EV_PASS]);
+    while (WiFi.status () != WL_CONNECTED)
+    {
+      delay (500);
+      debug_print(".");
+    }
+    debug_println ("success!");
+    debug_print ("IP Address is: ");
+    debug_println (WiFi.localIP ());  //
+    TFDrawText (&display, String("     ONLINE     "), 0, 13, display.color565(0, 0, 255));
+    //
+    debug_print ("timezone=");
+    debug_println (c_vars[EV_TZ]);
+    debug_print ("military=");
+    debug_println (c_vars[EV_24H]);
+    debug_print ("metric=");
+    debug_println (c_vars[EV_METRIC]);
+    debug_print ("date-format=");
+    debug_println (c_vars[EV_DATEFMT]);
+    debug_print ("dst=");
+    debug_println (c_vars[EV_DST]);
+    //start NTP
+    NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt(), toBool (String (c_vars[EV_DST])));
+    NTP.setInterval (10);//force rapid sync in 10sec
+    //
+    NTP.onNTPSyncEvent ([](NTPSyncEvent_t ntpEvent) 
+    {
+      if (ntpEvent) 
+      {
+        debug_print ("Time Sync error: ");
+        if (ntpEvent == noResponse)
+          debug_println ("NTP server not reachable");
+        else if (ntpEvent == invalidAddress)
+          debug_println ("Invalid NTP server address");
+      }
+      else 
+      {
+        debug_print ("Got NTP time: ");
+        debug_println (NTP.getTimeDateString (NTP.getLastNTPSync ()));
+        ntpsync = 1;
+      }
+    });
+    //delay (1500);
+    getWeather ();
+    //prep screen for clock display
+    display.fillScreen (0);
+    int cc_gry = display.color565 (128, 128, 128);
+    //reset digits color
+    digit0.SetColor (cc_gry);
+    digit1.SetColor (cc_gry);
+    digit2.SetColor (cc_gry);
+    digit3.SetColor (cc_gry);
+    digit4.SetColor (cc_gry);
+    digit5.SetColor (cc_gry);
+    digit1.DrawColon (cc_gry);
+    digit3.DrawColon (cc_gry);
+  }
   //
   httpsvr.begin (); // Start the HTTP Server
-  //delay (1500);
-  getWeather ();
-  //prep screen for clock display
-  display.fillScreen (0);
-  int cc_gry = display.color565 (128, 128, 128);
-  //reset digits color
-  digit0.SetColor (cc_gry);
-  digit1.SetColor (cc_gry);
-  digit2.SetColor (cc_gry);
-  digit3.SetColor (cc_gry);
-  digit4.SetColor (cc_gry);
-  digit5.SetColor (cc_gry);
-  digit1.DrawColon (cc_gry);
-  digit3.DrawColon (cc_gry);
   //
-  Serial.print ("display color range [");
-  Serial.print (display.color565 (0, 0, 0));
-  Serial.print (" .. ");
-  Serial.print (display.color565 (255, 255, 255));
-  Serial.println ("]");
+  debug_print ("display color range [");
+  debug_print (display.color565 (0, 0, 0));
+  debug_print (" .. ");
+  debug_print (display.color565 (255, 255, 255));
+  debug_println ("]");
 }
 
 const char server[]   = "api.openweathermap.org";
@@ -290,14 +346,14 @@ void getWeather ()
 {
   if (!apiKey.length ())
   {
-    Serial.println ("w:missing API KEY for weather data, skipping"); 
+    debug_println ("w:missing API KEY for weather data, skipping"); 
     return;
   }
-  Serial.print ("i:connecting to weather server.. "); 
+  debug_print ("i:connecting to weather server.. "); 
   // if you get a connection, report back via serial: 
   if (client.connect (server, 80))
   { 
-    Serial.println ("connected."); 
+    debug_println ("connected."); 
     // Make a HTTP request: 
     client.print ("GET /data/2.5/weather?"); 
     client.print ("q="+location); 
@@ -310,7 +366,7 @@ void getWeather ()
   } 
   else 
   { 
-    Serial.println ("w:unable to connect");
+    debug_println ("w:unable to connect");
     return;
   } 
   delay (1000);
@@ -319,19 +375,19 @@ void getWeather ()
   //do your best
   String line = client.readStringUntil ('\n');
   if (!line.length ())
-    Serial.println ("w:unable to retrieve weather data");
+    debug_println ("w:unable to retrieve weather data");
   else
   {
-    Serial.print ("weather:"); 
-    Serial.println (line); 
+    debug_print ("weather:"); 
+    debug_println (line); 
     //weather conditions - "main":"Clear",
     bT = line.indexOf ("\"main\":\"");
     if (bT > 0)
     {
       bT2 = line.indexOf ("\",\"", bT + 8);
       sval = line.substring (bT + 8, bT2);
-      Serial.print ("cond ");
-      Serial.println (sval);
+      debug_print ("cond ");
+      debug_println (sval);
       //0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
       condM = 0;
       if (sval.equals("Clear"))
@@ -350,8 +406,8 @@ void getWeather ()
         condM = 6;
       //
       condS = sval;
-      Serial.print ("condM ");
-      Serial.println (condM);
+      debug_print ("condM ");
+      debug_println (condM);
     }
     //tempM
     bT = line.indexOf ("\"temp\":");
@@ -359,60 +415,60 @@ void getWeather ()
     {
       bT2 = line.indexOf (",\"", bT + 7);
       sval = line.substring (bT + 7, bT2);
-      Serial.print ("temp: ");
-      Serial.println (sval);
+      debug_print ("temp: ");
+      debug_println (sval);
       tempM = sval.toInt ();
     }
     else
-      Serial.println ("temp NOT found!");
+      debug_println ("temp NOT found!");
     //tempMin
     bT = line.indexOf ("\"temp_min\":");
     if (bT > 0)
     {
       bT2 = line.indexOf (",\"", bT + 11);
       sval = line.substring (bT + 11, bT2);
-      Serial.print ("temp min: ");
-      Serial.println (sval);
+      debug_print ("temp min: ");
+      debug_println (sval);
       tempMin = sval.toInt ();
     }
     else
-      Serial.println ("temp_min NOT found!");
+      debug_println ("temp_min NOT found!");
     //tempMax
     bT = line.indexOf ("\"temp_max\":");
     if (bT > 0)
     {
       bT2 = line.indexOf ("},", bT + 11);
       sval = line.substring (bT + 11, bT2);
-      Serial.print ("temp max: ");
-      Serial.println (sval);
+      debug_print ("temp max: ");
+      debug_println (sval);
       tempMax = sval.toInt ();
     }
     else
-      Serial.println ("temp_max NOT found!");
+      debug_println ("temp_max NOT found!");
     //pressM
     bT = line.indexOf ("\"pressure\":");
     if (bT > 0)
     {
       bT2 = line.indexOf (",\"", bT + 11);
       sval = line.substring (bT + 11, bT2);
-      Serial.print ("press ");
-      Serial.println (sval);
+      debug_print ("press ");
+      debug_println (sval);
       presM = sval.toInt();
     }
     else
-      Serial.println ("pressure NOT found!");
+      debug_println ("pressure NOT found!");
     //humiM
     bT = line.indexOf ("\"humidity\":");
     if (bT > 0)
     {
       bT2 = line.indexOf (",\"", bT + 11);
       sval = line.substring (bT + 11, bT2);
-      Serial.print ("humi ");
-      Serial.println (sval);
+      debug_print ("humi ");
+      debug_println (sval);
       humiM = sval.toInt();
     }
     else
-      Serial.println ("humidity NOT found!");
+      debug_println ("humidity NOT found!");
   }//connected
 }
 
@@ -667,15 +723,15 @@ char daytime = 1;
 void draw_weather_conditions ()
 {
   //0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
-  Serial.print ("weather conditions ");
-  Serial.println (condM);
+  debug_print ("weather conditions ");
+  debug_println (condM);
   //cleanup previous cond
   xo = 3*TF_COLS; yo = 1;
 #ifdef USE_ICONS
   if (condM == 0 && daytime)
   {
-    Serial.print ("!weather condition icon unknown, show: ");
-    Serial.println (condS);
+    debug_print ("!weather condition icon unknown, show: ");
+    debug_println (condS);
     int cc_dgr = display.color565 (30, 30, 30);
     //draw the first 5 letters from the unknown weather condition
     String lstr = condS.substring (0, (condS.length () > 5?5:condS.length ()));
@@ -725,8 +781,8 @@ void draw_weather_conditions ()
   }
 #else
   xo = 3*TF_COLS; yo = 1;
-  Serial.print ("!weather condition icon unknown, show: ");
-  Serial.println (condS);
+  debug_print ("!weather condition icon unknown, show: ");
+  debug_println (condS);
   int cc_dgr = display.color565 (30, 30, 30);
   //draw the first 5 letters from the unknown weather condition
   String lstr = condS.substring (0, (condS.length () > 5?5:condS.length ()));
@@ -744,13 +800,13 @@ void draw_weather ()
   //int cc_ylw = display.color565 (cin, cin, 0);
   //int cc_gry = display.color565 (128, 128, 128);
   int cc_dgr = display.color565 (30, 30, 30);
-  Serial.println ("showing the weather");
+  debug_println ("showing the weather");
   xo = 0; yo = 1;
   TFDrawText (&display, String("                   "), xo, yo, cc_dgr);
   if (tempM == -10000 || humiM == -10000 || presM == -10000)
   {
     //TFDrawText (&display, String("NO WEATHER DATA"), xo, yo, cc_dgr);
-    Serial.println ("!no weather data available");
+    debug_println ("!no weather data available");
   }
   else
   {
@@ -779,8 +835,8 @@ void draw_weather ()
     }
     //
     String lstr = String (tempM) + String((*u_metric=='Y')?"C":"F");
-    Serial.print ("temperature: ");
-    Serial.println (lstr);
+    debug_print ("temperature: ");
+    debug_println (lstr);
     TFDrawText (&display, lstr, xo, yo, lcc);
     //weather conditions
     //-humidity
@@ -813,8 +869,8 @@ void draw_weather ()
         ct = cc_dgr;
         lstr = String (-tempMin);// + String((*u_metric=='Y')?"C":"F");
       }
-      Serial.print ("temp min: ");
-      Serial.println (lstr);
+      debug_print ("temp min: ");
+      debug_println (lstr);
       TFDrawText (&display, lstr, xo, yo, ct);
     }
     if (tempMax > -10000)
@@ -834,8 +890,8 @@ void draw_weather ()
         ct = cc_dgr;
         lstr = String (-tempMax);// + String((*u_metric=='Y')?"C":"F");
       }
-      Serial.print ("temp max: ");
-      Serial.println (lstr);
+      debug_print ("temp max: ");
+      debug_println (lstr);
       TFDrawText (&display, lstr, xo, yo, ct);
     }
     //weather conditions
@@ -845,7 +901,7 @@ void draw_weather ()
 
 void draw_love ()
 {
-  Serial.println ("showing some love");
+  debug_println ("showing some love");
   use_ani = 0;
   //love*you,boo
   yo = 1;
@@ -871,7 +927,7 @@ void draw_love ()
 void draw_date ()
 {
   int cc_grn = display.color565 (0, cin, 0);
-  Serial.println ("showing the date");
+  debug_println ("showing the date");
   //for (int i = 0 ; i < 12; i++)
     //TFDrawChar (&display, '0' + i%10, xo + i * 5, yo, display.color565 (0, 255, 0));
   //date below the clock
@@ -1173,7 +1229,7 @@ void web_server ()
     //Read what the browser has sent into a String class and print the request to the monitor
     String httprq = httpcli.readString ();
     //Looking under the hood
-    Serial.println (httprq);
+    debug_println (httprq);
     int pidx = -1;
     //
     String httprsp = "HTTP/1.1 200 OK\r\n";
@@ -1200,21 +1256,21 @@ void web_server ()
         //void setTime(int hr,int min,int sec,int dy, int mnth, int yr)
         setTime(hh, mm, ss, dd, MM, yy);
         ntpsync = 1;
-        Serial.print (">date and time: ");
-        Serial.print (datetime);
-        Serial.print (" vs ");
-        Serial.print (yy);
-        Serial.print (".");
-        Serial.print (MM);
-        Serial.print (".");
-        Serial.print (dd);
-        Serial.print (" ");
-        Serial.print (hh);
-        Serial.print (":");
-        Serial.print (mm);
-        Serial.print (":");
-        Serial.print (ss);
-        Serial.println ("");
+        debug_print (">date and time: ");
+        debug_print (datetime);
+        debug_print (" vs ");
+        debug_print (yy);
+        debug_print (".");
+        debug_print (MM);
+        debug_print (".");
+        debug_print (dd);
+        debug_print (" ");
+        debug_print (hh);
+        debug_print (":");
+        debug_print (mm);
+        debug_print (":");
+        debug_print (ss);
+        debug_println ("");
       }
     }
     else if (httprq.indexOf ("GET /daylight/on ") != -1)
@@ -1222,7 +1278,7 @@ void web_server ()
       strcpy (c_vars[EV_DST], "true");
       NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt (), toBool(String (c_vars[EV_DST])));
       httprsp += "<strong>daylight: on</strong><br>";
-      Serial.println ("daylight ON");
+      debug_println ("daylight ON");
       svf = 1;
     }
     else if (httprq.indexOf ("GET /daylight/off ") != -1)
@@ -1230,7 +1286,7 @@ void web_server ()
       strcpy (c_vars[EV_DST], "false");
       NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt (), toBool(String (c_vars[EV_DST])));
       httprsp += "<strong>daylight: off</strong><br>";
-      Serial.println ("daylight OFF");
+      debug_println ("daylight OFF");
       svf = 1;
     }
     else if ((pidx = httprq.indexOf ("GET /brightness/")) != -1)
@@ -1240,8 +1296,8 @@ void web_server ()
       {
         String bri = httprq.substring (pidx + 16, pidx2);
         display.setBrightness (bri.toInt ());
-        Serial.print (">brightness: ");
-        Serial.println (bri);
+        debug_print (">brightness: ");
+        debug_println (bri);
       }
     }
     else if ((pidx = httprq.indexOf ("GET /timezone/")) != -1)
@@ -1254,14 +1310,14 @@ void web_server ()
         strcpy (c_vars[EV_TZ], tz.c_str ());
         NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt (), toBool(String (c_vars[EV_DST])));
         httprsp += "<strong>timezone:" + tz + "</strong><br>";
-        Serial.print ("timezone: ");
-        Serial.println (c_vars[EV_TZ]);
+        debug_print ("timezone: ");
+        debug_println (c_vars[EV_TZ]);
         svf = 1;
       }
       else
       {
         httprsp += "<strong>!invalid timezone!</strong><br>";
-        Serial.print ("invalid timezone");
+        debug_print ("invalid timezone");
       }
     }
     //
@@ -1306,11 +1362,11 @@ void web_server ()
     if (svf)
     {
       if (vars_write () > 0)
-        Serial.println ("variables stored");
+        debug_println ("variables stored");
       else
-        Serial.println ("variables storing failed");
+        debug_println ("variables storing failed");
     }
-    Serial.println ("Client disonnected");
+    debug_println ("Client disonnected");
   }
 }
 
@@ -1338,7 +1394,7 @@ void loop ()
     {
       if ((cm - last) > FIREWORKS_LOOP)
       {
-        //Serial.println(millis() - last);
+        //debug_println(millis() - last);
         last = cm;
         i++;
         fireworks_loop (i);
@@ -1352,7 +1408,7 @@ void loop ()
   //weather animations
   if ((cm - last) > 150)
   {
-    //Serial.println(millis() - last);
+    //debug_println(millis() - last);
     last = cm;
     i++;
     //
@@ -1371,20 +1427,20 @@ void loop ()
     if (hh >= 20 && cin == 150)
     {
       cin = 25;
-      Serial.println ("night mode brightness");
+      debug_println ("night mode brightness");
       daytime = 0;
     }
     if (hh < 8 && cin == 150)
     {
       cin = 25;
-      Serial.println ("night mode brightness");
+      debug_println ("night mode brightness");
       daytime = 0;
     }
     //during the day, bright
     if (hh >= 8 && hh < 20 && cin == 25)
     {
       cin = 150;
-      Serial.println ("day mode brightness");
+      debug_println ("day mode brightness");
       daytime = 1;
     }
     //we had a sync so draw without morphing
