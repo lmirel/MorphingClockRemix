@@ -19,9 +19,10 @@ Install esp8266 by ESP8266 Community.
 
 in case of errors related to NTP or time:
 To get past these errors you need to install these library's:
-NTPClient by Fabrice Weinberg
-Time by Michael Margolis
-NtpClientLib by Germán Martín
+--not used: NTPClient by Fabrice Weinberg https://github.com/arduino-libraries/NTPClient
+Time 1.5 by Michael Margolis https://github.com/PaulStoffregen/Time
+NtpClientLib 3.0.2-beta by Germán Martín https://github.com/gmag11/NtpClient
+PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 */
 
 #include <TimeLib.h>
@@ -745,7 +746,7 @@ void draw_weather ()
   int cc_dgr = display.color565 (30, 30, 30);
   Serial.println ("showing the weather");
   xo = 0; yo = 1;
-  TFDrawText (&display, String("                "), xo, yo, cc_dgr);
+  TFDrawText (&display, String("                   "), xo, yo, cc_dgr);
   if (tempM == -10000 || humiM == -10000 || presM == -10000)
   {
     //TFDrawText (&display, String("NO WEATHER DATA"), xo, yo, cc_dgr);
@@ -796,6 +797,8 @@ void draw_weather ()
     //-pressure
     lstr = String (presM);
     xo = 12*TF_COLS;
+    if (presM < 1000)
+        xo = 13*TF_COLS;
     TFDrawText (&display, lstr, xo, yo, cc_blu);
     //draw temp min/max
     if (tempMin > -10000)
@@ -1176,7 +1179,45 @@ void web_server ()
     String httprsp = "HTTP/1.1 200 OK\r\n";
     httprsp += "Content-type: text/html\r\n\r\n";
     httprsp += "<!DOCTYPE HTML>\r\n<html>\r\n";
-    if (httprq.indexOf ("/daylight/on ") != -1)
+    //check requests
+    if ((pidx = httprq.indexOf ("GET /datetime/")) != -1)
+    {
+      int pidx2 = httprq.indexOf (" ", pidx + 14);
+      if (pidx2 != -1)
+      {
+        String datetime = httprq.substring (pidx + 14, pidx2);
+        //display.setBrightness (bri.toInt ());
+        int yy = datetime.substring(0, 4).toInt();
+        int MM = datetime.substring(4, 6).toInt();
+        int dd = datetime.substring(6, 8).toInt();
+        int hh = datetime.substring(8, 10).toInt();
+        int mm = datetime.substring(10, 12).toInt();
+        int ss = 0;
+        if (datetime.length() == 14)
+        {
+          ss = datetime.substring(12, 14).toInt();
+        }
+        //void setTime(int hr,int min,int sec,int dy, int mnth, int yr)
+        setTime(hh, mm, ss, dd, MM, yy);
+        ntpsync = 1;
+        Serial.print (">date and time: ");
+        Serial.print (datetime);
+        Serial.print (" vs ");
+        Serial.print (yy);
+        Serial.print (".");
+        Serial.print (MM);
+        Serial.print (".");
+        Serial.print (dd);
+        Serial.print (" ");
+        Serial.print (hh);
+        Serial.print (":");
+        Serial.print (mm);
+        Serial.print (":");
+        Serial.print (ss);
+        Serial.println ("");
+      }
+    }
+    else if (httprq.indexOf ("GET /daylight/on ") != -1)
     {
       strcpy (c_vars[EV_DST], "true");
       NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt (), toBool(String (c_vars[EV_DST])));
@@ -1184,7 +1225,7 @@ void web_server ()
       Serial.println ("daylight ON");
       svf = 1;
     }
-    else if (httprq.indexOf ("/daylight/off ") != -1)
+    else if (httprq.indexOf ("GET /daylight/off ") != -1)
     {
       strcpy (c_vars[EV_DST], "false");
       NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt (), toBool(String (c_vars[EV_DST])));
@@ -1192,23 +1233,23 @@ void web_server ()
       Serial.println ("daylight OFF");
       svf = 1;
     }
-    else if ((pidx = httprq.indexOf ("/brightness/")) != -1)
+    else if ((pidx = httprq.indexOf ("GET /brightness/")) != -1)
     {
-      int pidx2 = httprq.indexOf (" ", pidx + 12);
+      int pidx2 = httprq.indexOf (" ", pidx + 16);
       if (pidx2 != -1)
       {
-        String bri = httprq.substring (pidx + 12, pidx2);
+        String bri = httprq.substring (pidx + 16, pidx2);
         display.setBrightness (bri.toInt ());
         Serial.print (">brightness: ");
         Serial.println (bri);
       }
     }
-    else if ((pidx = httprq.indexOf ("/timezone/")) != -1)
+    else if ((pidx = httprq.indexOf ("GET /timezone/")) != -1)
     {
-      int pidx2 = httprq.indexOf (" ", pidx + 10);
+      int pidx2 = httprq.indexOf (" ", pidx + 14);
       if (pidx2 != -1)
       {
-        String tz = httprq.substring (pidx + 10, pidx2);
+        String tz = httprq.substring (pidx + 14, pidx2);
         //strcpy (timezone, tz.c_str ());
         strcpy (c_vars[EV_TZ], tz.c_str ());
         NTP.begin (ntpsvr, String (c_vars[EV_TZ]).toInt (), toBool(String (c_vars[EV_DST])));
@@ -1241,6 +1282,22 @@ void web_server ()
     httprsp += "daylight: " + String (c_vars[EV_DST]) + "<br>";
     httprsp += "timezone: " + String (c_vars[EV_TZ]) + "<br>";
     httprsp += "<br><a href='/'>home</a><br>";
+    httprsp += "<br>" \
+      "<script language='javascript'>" \
+      "var today = new Date();" \
+      "var hh = today.getHours();" \
+      "var mm = today.getMinutes();" \
+      "if(hh<10)hh='0'+hh;" \
+      "if(mm<59)mm=1+mm;" \
+      "if(mm<10)mm='0'+mm;" \
+      "var dd = today.getDate();" \
+      "var MM = today.getMonth()+1;" \
+      "if(dd<10)dd='0'+dd;" \
+      "if(MM<10)MM='0'+MM;" \
+      "var yyyy = today.getFullYear();" \
+      "document.write('set date and time to <a href=/datetime/'+yyyy+MM+dd+hh+mm+'>'+yyyy+'.'+MM+'.'+dd+' '+hh+':'+mm+':00 (next minute)</a><br>');" \
+      "document.write('using current date and time '+today);" \
+      "</script>";
     httprsp += "</html>\r\n";
     httpcli.flush (); //clear previous info in the stream
     httpcli.print (httprsp); // Send the response to the client
