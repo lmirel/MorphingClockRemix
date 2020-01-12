@@ -24,7 +24,7 @@ Time 1.5 by Michael Margolis https://github.com/PaulStoffregen/Time
 NtpClientLib 3.0.2-beta by Germán Martín https://github.com/gmag11/NtpClient
 PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 */
-#define DEBUG 1
+#define DEBUG 0
 #define debug_println(...) \
             do { if (DEBUG) Serial.println(__VA_ARGS__); } while (0)
 #define debug_print(...) \
@@ -38,8 +38,8 @@ PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 #define double_buffer
 #include <PxMatrix.h>
 
-//#define USE_ICONS
-//#define USE_WEATHER_ANI
+#define USE_ICONS
+#define USE_WEATHER_ANI
 #define USE_FIREWORKS
 
 #include "FS.h"
