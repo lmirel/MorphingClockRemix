@@ -33,6 +33,7 @@ PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 #include <TimeLib.h>
 #include <NtpClientLib.h>
 #include <ESP8266WiFi.h>
+#include <DNSServer.h>
 
 #define double_buffer
 #include <PxMatrix.h>
@@ -56,7 +57,12 @@ Ticker display_ticker;
 #endif
 
 WiFiServer httpsvr (80); //Initialize the server on Port 80
-
+DNSServer dnsServer;
+const byte DNS_PORT = 53;
+byte wifimac[6];                     // the MAC address of your Wifi shield
+IPAddress ap_static_ip(192,168,4,1);
+IPAddress ap_static_nm(255,255,255,0);
+    
 // Pins for LED MATRIX
 PxMATRIX display(64, 32, P_LAT, P_OE, P_A, P_B, P_C, P_D, P_E);
 #include "TinyFont.h"
@@ -113,14 +119,15 @@ byte mm;
 byte ss;
 byte ntpsync = 1;
 const char ntpsvr[] = "pool.ntp.org";
-const char softap[] = "esp-weather";
+const char softap[] = "espweather";
+char ssidap[16];
 //settings
 #define NVARS 15
 #define LVARS 12
 char c_vars [NVARS][LVARS];
 typedef enum e_vars {
   EV_SSID = 0,
-  EV_SSID2 = 0,
+  EV_SSID2,
   EV_PASS,
   EV_PASS2,
   EV_TZ,
@@ -243,22 +250,46 @@ void setup ()
       debug_println ("variables storing failed");
   }
   //do we need wifi configuration?
-  c_vars[EV_SSID][0] = '\0';
+  WiFi.macAddress(wifimac);
+  debug_print("MAC: ");
+  debug_print(wifimac[5],HEX);
+  debug_print(":");
+  debug_print(wifimac[4],HEX);
+  debug_print(":");
+  debug_print(wifimac[3],HEX);
+  debug_print(":");
+  debug_print(wifimac[2],HEX);
+  debug_print(":");
+  debug_print(wifimac[1],HEX);
+  debug_print(":");
+  debug_println(wifimac[0],HEX);  //
+  //c_vars[EV_SSID][0] = '\0';
   if (c_vars[EV_SSID][0] == '\0')
   {
     //start AP mode
     ap_mode = 1;
+    WiFi.persistent(false);
+    // disconnect sta, start ap
+    WiFi.disconnect(); //  this alone is not enough to stop the autoconnecter
+    WiFi.mode(WIFI_AP);
+    WiFi.persistent(true);
     display.fillScreen (0);
     TFDrawText (&display, String ("     SETUP      "), 0, 13, display.color565(0, 0, 255));
-    WiFi.softAP(softap, softap);
+    snprintf(ssidap, 15, "%s-%02X%02X", softap, wifimac[1], wifimac[0]);
+    WiFi.softAPConfig(ap_static_ip, ap_static_ip, ap_static_nm);
+    WiFi.softAP(ssidap, softap);
     debug_print("AP Server IP address: ");
     debug_println(WiFi.softAPIP());
-    debug_print("Server MAC address: ");
-    debug_println(WiFi.softAPmacAddress());
+    //debug_print("Server MAC address: ");
+    //debug_println(WiFi.softAPmacAddress());
+    // if DNSServer is started with "*" for domain name, it will reply with
+    // provided IP to all DNS request
+    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
   }
   else
   {
     //start client mode
+    WiFi.mode(WIFI_AP_STA);
     debug_print ("Connecting");
     TFDrawText (&display, String ("   CONNECTING   "), 0, 13, display.color565(0, 0, 255));
     //connect to wifi network
@@ -800,10 +831,11 @@ void draw_weather ()
   xo = 0; yo = 1;
   TFDrawText (&display, String("                   "), xo, yo, cc_dgr);
   //
-  if (ap_mode)
+  long tnow = now ();
+  if (ap_mode && year(tnow) == 1970)
   {
     //show AP ip
-    String lap = String(softap);
+    String lap = String(ssidap);
     lap.toUpperCase();
     TFDrawText (&display, lap, xo, yo, display.color565 (20, 20, 20));
     return;
@@ -936,7 +968,8 @@ void draw_date ()
   xo = 3*TF_COLS; yo = 26;
   debug_println ("showing the date");
   //
-  if (ap_mode)
+  long tnow = now ();
+  if (ap_mode && year(tnow) == 1970)
   {
     //show AP ip
     xo = 0;
@@ -946,7 +979,6 @@ void draw_date ()
   //for (int i = 0 ; i < 12; i++)
     //TFDrawChar (&display, '0' + i%10, xo + i * 5, yo, display.color565 (0, 255, 0));
   //date below the clock
-  long tnow = now ();
   String lstr = "";
   for (int i = 0; i < 5; i += 2)
   {
@@ -1236,10 +1268,13 @@ WiFiClient httpcli;
 //handle web server requests
 void web_server ()
 {
+  if (ap_mode)
+    dnsServer.processNextRequest();
+  //
   httpcli = httpsvr.available ();
   if (httpcli) 
   {
-    char svf = 0;
+    char svf = 0, rst = 0;
     //Read what the browser has sent into a String class and print the request to the monitor
     String httprq = httpcli.readString ();
     //Looking under the hood
@@ -1286,6 +1321,25 @@ void web_server ()
         debug_print (ss);
         debug_println ("");
       }
+    }
+    else if (httprq.indexOf ("GET /wifi/") != -1)
+    {
+      //GET /wifi/?ssid=ssid&pass=pass HTTP/1.1
+      pidx = httprq.indexOf ("?ssid=");
+      int pidx2 = httprq.indexOf ("&pass=");
+      String ssid = httprq.substring (pidx + 6, pidx2);
+      pidx = httprq.indexOf (" ", pidx2);
+      String pass = httprq.substring (pidx2 + 6, pidx);
+      //
+      debug_print (">wifi:");
+      debug_print (ssid);
+      debug_print (":");
+      debug_println (pass);
+      //
+      strncpy(c_vars[EV_SSID], ssid.c_str(), LVARS * 2);
+      strncpy(c_vars[EV_PASS], pass.c_str(), LVARS * 2);
+      svf = 1;
+      rst = 1;
     }
     else if (httprq.indexOf ("GET /daylight/on ") != -1)
     {
@@ -1347,7 +1401,11 @@ void web_server ()
     httprsp += "<a href='/brightness/100'>brightness 100</a><br>";
     httprsp += "<a href='/brightness/200'>brightness 200</a><br>";
     httprsp += "use /brightness/x for display brightness 'x' from 0 (darkest) to 255 (brightest)<br>";
-    httprsp += "<br><br>";
+    httprsp += "<br>wifi configuration<br>";
+    httprsp += "<form action='/wifi/'>" \
+      "ssid:<input type='text' name='ssid'><br>" \
+      "pass:<input type='text' name='pass'><br>" \
+      "<input type='submit' value='set wifi'></form><br>";
     httprsp += "current configuration<br>";
     httprsp += "daylight: " + String (c_vars[EV_DST]) + "<br>";
     httprsp += "timezone: " + String (c_vars[EV_TZ]) + "<br>";
@@ -1381,6 +1439,16 @@ void web_server ()
         debug_println ("variables storing failed");
     }
     debug_println ("Client disonnected");
+    //
+    if (rst)
+      ESP.reset();
+    //turn off wifi if in ap mode with date&time
+    long tnow = now ();
+    if (ap_mode && year(tnow) > 1970)
+    {
+      WiFi.disconnect();
+      WiFi.mode(WIFI_OFF);
+    }
   }
 }
 
