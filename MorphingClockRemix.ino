@@ -24,7 +24,7 @@ Time 1.5 by Michael Margolis https://github.com/PaulStoffregen/Time
 NtpClientLib 3.0.2-beta by Germán Martín https://github.com/gmag11/NtpClient
 PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 */
-#define DEBUG 0
+#define DEBUG 1
 #define debug_println(...) \
             do { if (DEBUG) Serial.println(__VA_ARGS__); } while (0)
 #define debug_print(...) \
@@ -368,6 +368,8 @@ int tempM = -10000;
 int presM = -10000;
 int humiM = -10000;
 int condM = -1;  //-1 - undefined, 0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
+int tmsunrise = 0;//"sunrise":1575096078,"sunset":1575127409
+int tmsunset = 0;
 String condS = "";
 void getWeather ()
 {
@@ -496,6 +498,30 @@ void getWeather ()
     }
     else
       debug_println ("humidity NOT found!");
+    //sunset
+    bT = line.indexOf ("\"sunset\":");
+    if (bT > 0)
+    {
+      tmsunset = line.substring (bT + 9).toInt();
+      debug_print ("sunset ");
+      debug_println (tmsunset);
+    }
+    else
+    {
+      //need to compute night mode from 2000 to 0800: 
+    }
+    //sunrise
+    bT = line.indexOf ("\"sunrise\":");
+    if (bT > 0)
+    {
+      tmsunrise = line.substring (bT + 10).toInt();
+      debug_print ("sunrise ");
+      debug_println (tmsunrise);
+    }
+    else
+    {
+      //need to compute night mode from 2000 to 0800: 
+    }
   }//connected
 }
 
@@ -1486,7 +1512,6 @@ void loop ()
     }
   }
 #endif //define USE_FIREWORKS
-
   //weather animations
   if ((cm - last) > 150)
   {
@@ -1497,6 +1522,22 @@ void loop ()
     draw_animations (i);
     //
   }
+  //check sunset/sunrise on minute change only
+  if (mm != prevmm)
+  {
+    if (tmsunset < tnow || tmsunrise > tnow)
+    {
+      cin = 25;
+      debug_println ("night mode brightness");
+      daytime = 0;
+    }
+    else
+    {
+      cin = 150;
+      debug_println ("day mode brightness");
+      daytime = 1;
+    }
+  }
   //
   if (ntpsync)
   {
@@ -1505,6 +1546,7 @@ void loop ()
     prevss = ss;
     prevmm = mm;
     prevhh = hh;
+#if 0    
     //brightness control: dimmed during the night(25), bright during the day(150)
     if (hh >= 20 && cin == 150)
     {
@@ -1525,6 +1567,7 @@ void loop ()
       debug_println ("day mode brightness");
       daytime = 1;
     }
+#endif
     //we had a sync so draw without morphing
     int cc_gry = display.color565 (128, 128, 128);
     int cc_dgr = display.color565 (30, 30, 30);
