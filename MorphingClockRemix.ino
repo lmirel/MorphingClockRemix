@@ -120,7 +120,7 @@ byte ss;
 byte ntpsync = 1;
 const char ntpsvr[] = "pool.ntp.org";
 const char softap[] = "espweather";
-char ssidap[16];
+char ssidap[17];
 //settings
 #define NVARS 15
 #define LVARS 12
@@ -275,7 +275,7 @@ void setup ()
     WiFi.persistent(true);
     display.fillScreen (0);
     TFDrawText (&display, String ("     SETUP      "), 0, 13, display.color565(0, 0, 255));
-    snprintf(ssidap, 15, "%s-%02X%02X", softap, wifimac[1], wifimac[0]);
+    snprintf(ssidap, 16, "%s-%02X%02X", softap, wifimac[1], wifimac[0]);
     WiFi.softAPConfig(ap_static_ip, ap_static_ip, ap_static_nm);
     WiFi.softAP(ssidap, softap);
     debug_print("AP Server IP address: ");
