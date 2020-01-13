@@ -511,7 +511,7 @@ void getWeather ()
     bT = line.indexOf ("\"sunset\":");
     if (bT > 0)
     {
-      tmsunset = line.substring (bT + 9).toInt();
+      tmsunset = line.substring (bT + 9).toInt() + 3600 * String (c_vars[EV_TZ]).toInt(); //add TZ to UTC sunrise
       debug_print ("sunset ");
       debug_println (tmsunset);
     }
@@ -523,7 +523,7 @@ void getWeather ()
     bT = line.indexOf ("\"sunrise\":");
     if (bT > 0)
     {
-      tmsunrise = line.substring (bT + 10).toInt();
+      tmsunrise = line.substring (bT + 10).toInt() + 3600 * String (c_vars[EV_TZ]).toInt(); //add TZ to UTC sunrise
       debug_print ("sunrise ");
       debug_println (tmsunrise);
     }
@@ -1509,7 +1509,7 @@ void web_server ()
       "if(dd<10)dd='0'+dd;" \
       "if(MM<10)MM='0'+MM;" \
       "var yyyy = today.getFullYear();" \
-      "document.write('set date and time to <a href=/datetime/'+yyyy+MM+dd+hh+mm+'>'+yyyy+'.'+MM+'.'+dd+' '+hh+':'+mm+':00 (next minute)</a><br>');" \
+      "document.write('set date and time to <a href=/datetime/'+yyyy+MM+dd+hh+mm+'>'+yyyy+'.'+MM+'.'+dd+' '+hh+':'+mm+':00 (next minute, disable wifi)</a><br>');" \
       "document.write('using current date and time '+today);" \
       "</script>";
     httprsp += "</html>\r\n";
@@ -1667,6 +1667,13 @@ void loop ()
     else
       debug_println("OTA update skip");
     //
+    debug_print ("time now: ");
+    debug_println (tnow);
+    /*
+    sunset 1578930185
+    sunrise 1578898842
+    time now: 1578932858
+    */
     if (tmsunset < tnow || tmsunrise > tnow)
     {
       cin = 25;
