@@ -34,13 +34,14 @@ PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 #include <NtpClientLib.h>
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>
+#include <ESP8266httpUpdate.h>
 
 #define double_buffer
 #include <PxMatrix.h>
 
-#define USE_ICONS
-#define USE_WEATHER_ANI
-#define USE_FIREWORKS
+#define USE_ICONS         //2% memory use
+//#define USE_WEATHER_ANI   //4% memory use
+#define USE_FIREWORKS     //1% memory use
 
 #include "FS.h"
 
@@ -62,7 +63,8 @@ const byte DNS_PORT = 53;
 byte wifimac[6];                     // the MAC address of your Wifi shield
 IPAddress ap_static_ip(192,168,4,1);
 IPAddress ap_static_nm(255,255,255,0);
-    
+#define USE_SERIAL Serial
+
 // Pins for LED MATRIX
 PxMATRIX display(64, 32, P_LAT, P_OE, P_A, P_B, P_C, P_D, P_E);
 #include "TinyFont.h"
@@ -122,10 +124,7 @@ const char ntpsvr[] = "pool.ntp.org";
 const char softap[] = "espweather";
 char ssidap[17];
 //settings
-#define NVARS 15
-#define LVARS 12
-char c_vars [NVARS][LVARS];
-typedef enum e_vars {
+enum e_vars {
   EV_SSID = 0,
   EV_SSID2,
   EV_PASS,
@@ -141,8 +140,13 @@ typedef enum e_vars {
   EV_GEOLOC2,
   EV_GEOLOC3,
   EV_DST,
+  EV_OTA,
+  EV_OTA1,
+  EV_OTA2,
   EV_MAX
 };
+#define LVARS 12
+char c_vars [EV_MAX][LVARS];
 
 bool toBool (String s)
 {
@@ -158,11 +162,16 @@ int vars_read ()
     return 0;
   }
   //read vars
-  for (int i = 0; i < NVARS; i++)
+  for (int i = 0; i < EV_MAX; i++)
+  {
     for (int j = 0; j < LVARS; j++)
       c_vars[i][j] = (char)varf.read ();
+    //check for FLASH default 0xff
+    if (c_vars[i][0] == 0xFF)
+      c_vars[i][0] = 0x00;
+  }
   //
-  for (int i = 0; i < NVARS; i++)
+  for (int i = 0; i < EV_MAX; i++)
   {
     debug_print ("var ");
     debug_print (i);
@@ -183,7 +192,7 @@ int vars_write ()
     return 0;
   }
   //
-  for (int i = 0; i < NVARS; i++)
+  for (int i = 0; i < EV_MAX; i++)
   {
     debug_print ("var ");
     debug_print (i);
@@ -191,7 +200,7 @@ int vars_write ()
     debug_println (c_vars[i]);
   }
   //write vars
-  for (int i = 0; i < NVARS; i++)
+  for (int i = 0; i < EV_MAX; i++)
     for (int j = 0; j < LVARS; j++)
       if (varf.write (c_vars[i][j]) != 1)
         debug_println ("error writing var");
@@ -1240,7 +1249,7 @@ Firework fw[FIREWORKS];
 
 void fireworks_loop (int frm)
 {
-  int cc_frw;
+  int cc_frw = frm;
   //display.fillScreen (0);
   // Draw fireworks
   //cout << "Firework count is: " << Firework::fireworkCount << endl;
@@ -1282,6 +1291,15 @@ void fireworks_loop (int frm)
 }
 //-
 #endif //define USE_FIREWORKS
+//convert hex letter to value
+char hexchar2code (const char *hb)
+{
+  if (*hb >= 'a')
+    return *hb - 'a' + 10;
+  if (*hb >= 'A')
+    return *hb - 'A' + 10;
+  return *hb - '0';
+}
 
 byte prevhh = 0;
 byte prevmm = 0;
@@ -1348,13 +1366,51 @@ void web_server ()
         debug_println ("");
       }
     }
+    else if (httprq.indexOf ("GET /ota/") != -1)
+    {
+      //GET /ota/?otaloc=192.168.2.38%3A8000%2Fespweather.bin HTTP/1.1
+      pidx = httprq.indexOf ("?otaloc=");
+      int pidx2 = httprq.indexOf (" HTTP/", pidx);
+      if (pidx2 > 0)
+      {
+        strncpy(c_vars[EV_OTA], httprq.substring(pidx + 8, pidx2).c_str(), LVARS * 3);
+        //debug_print (">ota1:");
+        //debug_println (c_vars[EV_OTA]);
+        char *bc = c_vars[EV_OTA];
+        int   ck = 0;
+        //debug_print (">ota2:");
+        //debug_println (bc);
+        //convert in place url %HH excaped chars
+        while (*bc > 0 && ck < LVARS * 3)
+        {
+          if (*bc == '%')
+          {
+            //convert URL chars to ascii
+            c_vars[EV_OTA][ck] = hexchar2code (bc+1)<<4 | hexchar2code (bc+2);
+            bc += 2;
+          }
+          else
+            c_vars[EV_OTA][ck] = *bc;
+          //next one
+          //debug_println (c_vars[EV_OTA][ck]);
+          bc++;
+          ck++;
+        }
+        c_vars[EV_OTA][ck] = 0;
+        svf = 1;
+      }
+      //
+      debug_print (">ota:");
+      debug_println (c_vars[EV_OTA]);
+      //
+    }
     else if (httprq.indexOf ("GET /wifi/") != -1)
     {
       //GET /wifi/?ssid=ssid&pass=pass HTTP/1.1
       pidx = httprq.indexOf ("?ssid=");
       int pidx2 = httprq.indexOf ("&pass=");
       String ssid = httprq.substring (pidx + 6, pidx2);
-      pidx = httprq.indexOf (" ", pidx2);
+      pidx = httprq.indexOf (" HTTP/", pidx2);
       String pass = httprq.substring (pidx2 + 6, pidx);
       //
       debug_print (">wifi:");
@@ -1427,10 +1483,14 @@ void web_server ()
     httprsp += "<a href='/brightness/100'>brightness 100</a><br>";
     httprsp += "<a href='/brightness/200'>brightness 200</a><br>";
     httprsp += "use /brightness/x for display brightness 'x' from 0 (darkest) to 255 (brightest)<br>";
+    httprsp += "<br>OTA update configuration (every minute)<br>";
+    httprsp += "<form action='/ota/'>" \
+      "http://<input type='text' name='otaloc' value='" + String(c_vars[EV_OTA]) + "'>(ip address:port/filename)<br>" \
+      "<input type='submit' value='set OTA location'></form><br>";
     httprsp += "<br>wifi configuration<br>";
     httprsp += "<form action='/wifi/'>" \
-      "ssid:<input type='text' name='ssid'><br>" \
-      "pass:<input type='text' name='pass'><br>" \
+      "ssid:<input type='text' name='ssid'>" + String(c_vars[EV_SSID]) + "<br>" \
+      "pass:<input type='text' name='pass'>" + String(c_vars[EV_PASS]) + "<br>" \
       "<input type='submit' value='set wifi'></form><br>";
     httprsp += "current configuration<br>";
     httprsp += "daylight: " + String (c_vars[EV_DST]) + "<br>";
@@ -1476,6 +1536,24 @@ void web_server ()
       WiFi.mode(WIFI_OFF);
     }
   }
+}
+
+#if 0
+void update_started() {
+  USE_SERIAL.println("CALLBACK:  HTTP update process started");
+}
+
+void update_finished() {
+  USE_SERIAL.println("CALLBACK:  HTTP update process finished");
+}
+
+void update_error(int err) {
+  USE_SERIAL.printf("CALLBACK:  HTTP update fatal error code %d\n", err);
+}
+#endif
+
+void update_progress(int cur, int total) {
+  USE_SERIAL.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
 }
 
 void loop ()
@@ -1525,6 +1603,66 @@ void loop ()
   //check sunset/sunrise on minute change only
   if (mm != prevmm)
   {
+    //check for OTA updates
+    if (c_vars[EV_OTA][0])
+    {
+      // Add optional callback notifiers
+      #if 0
+      ESPhttpUpdate.onStart(update_started);
+      ESPhttpUpdate.onEnd(update_finished);
+      ESPhttpUpdate.onError(update_error);
+      #endif
+      ESPhttpUpdate.onProgress(update_progress);
+      #if 1 //use new OTA API
+      WiFiClient client;
+      ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
+      String otaloc = "http://" + String(c_vars[EV_OTA]);
+      debug_print("OTA update from http://");
+      debug_println(otaloc);
+      //
+      t_httpUpdate_return ret = ESPhttpUpdate.update(client, otaloc);
+      #else
+      String otaloc = String(c_vars[EV_OTA]);
+      debug_print("OTA update from http://");
+      //debug_print(c_vars[EV_OTA][0], HEX);
+      debug_println(otaloc);
+      //
+      int pidx = otaloc.indexOf(":");
+      int pidx2 = otaloc.indexOf("/");
+      int port = 80;
+      String svr = otaloc.substring(0, pidx2);
+      if (pidx > 0)
+      {
+        port = otaloc.substring(pidx + 1, pidx2).toInt();
+        svr = otaloc.substring(0, pidx);
+      }
+      //
+      debug_print("OTA2 update from http://");
+      debug_print(svr);
+      debug_print(":");
+      debug_print(port);
+      debug_println(otaloc.substring(pidx2));
+      //t_httpUpdate_return ret = ESPhttpUpdate.update("192.168.2.38", 8080, "/espweather.bin", "ota1");
+      t_httpUpdate_return ret = ESPhttpUpdate.update(svr, port, otaloc.substring(pidx2), "ota1");
+      #endif
+      switch (ret) 
+      {
+        case HTTP_UPDATE_FAILED:
+          USE_SERIAL.printf("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+          break;
+  
+        case HTTP_UPDATE_NO_UPDATES:
+          USE_SERIAL.println("HTTP_UPDATE_NO_UPDATES");
+          break;
+  
+        case HTTP_UPDATE_OK:
+          USE_SERIAL.println("HTTP_UPDATE_OK");
+          break;
+      }
+    }
+    else
+      debug_println("OTA update skip");
+    //
     if (tmsunset < tnow || tmsunrise > tnow)
     {
       cin = 25;
