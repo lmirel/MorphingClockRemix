@@ -1554,6 +1554,10 @@ void update_error(int err) {
 
 void update_progress(int cur, int total) {
   USE_SERIAL.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
+  //show percentage
+  TFDrawText (&display, "OTA ", 0, 1, display.color565 (50, 0, 0));
+  String prc = String(cur * 100 / total) + "% ";
+  TFDrawText (&display, prc, 8*TF_COLS, 1, display.color565 (50, 0, 0));
 }
 
 void loop ()
