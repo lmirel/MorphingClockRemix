@@ -317,7 +317,6 @@ void loop()
 *
 */
 
-void DrawIcon (PxMATRIX* d, int *ico, char xo, char yo, int cols, int rows);
+void DrawIcon (PxMATRIX* d, unsigned short *ico, char xo, char yo, int cols, int rows);
 
 #endif
-

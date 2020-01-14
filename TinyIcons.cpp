@@ -11,7 +11,7 @@
 #define debug_print(...) \
             do { if (DEBUG) Serial.print(__VA_ARGS__); } while (0)
 
-void DrawIcon (PxMATRIX* d, int *ico, char xo, char yo, int cols, int rows)
+void DrawIcon (PxMATRIX* d, unsigned short *ico, char xo, char yo, int cols, int rows)
 {
   debug_print ("draw icon ");
   debug_print (cols);
@@ -30,4 +30,3 @@ void DrawIcon (PxMATRIX* d, int *ico, char xo, char yo, int cols, int rows)
   }
   debug_println ();
 }
-
