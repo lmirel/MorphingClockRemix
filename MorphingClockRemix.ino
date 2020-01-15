@@ -1305,6 +1305,7 @@ byte prevhh = 0;
 byte prevmm = 0;
 byte prevss = 0;
 long tnow;
+unsigned char dbri = 255;
 #define FIREWORKS_DISPLAY 10//sec
 #define FIREWORKS_LOOP    50//ms
 WiFiClient httpcli;
@@ -1445,9 +1446,11 @@ void web_server ()
       if (pidx2 != -1)
       {
         String bri = httprq.substring (pidx + 16, pidx2);
-        display.setBrightness (bri.toInt ());
+        dbri = (unsigned char)bri.toInt ();
+        display.setBrightness (dbri);
         debug_print (">brightness: ");
         debug_println (bri);
+        ntpsync = 1; //force full redraw
       }
     }
     else if ((pidx = httprq.indexOf ("GET /timezone/")) != -1)
@@ -1478,6 +1481,7 @@ void web_server ()
     httprsp += "<a href='/timezone/1'>timezone 1</a><br>";
     httprsp += "<a href='/timezone/2'>timezone 2</a><br>";
     httprsp += "use /timezone/x for timezone 'x'<br>";
+    httprsp += "<a href='/brightness/0'>brightness 0 (turn off display)</a><br>";
     httprsp += "<a href='/brightness/10'>brightness 10</a><br>";
     httprsp += "<a href='/brightness/50'>brightness 50</a><br>";
     httprsp += "<a href='/brightness/100'>brightness 100</a><br>";
@@ -1570,6 +1574,13 @@ void loop ()
   //time changes every miliseconds, we only want to draw when digits actually change
   tnow = now ();
   //
+  if (dbri == 0)
+  {
+    display.fillScreen (0);
+    delay(1000);
+    return;
+  }
+  //
   hh = hour (tnow);   //NTP.getHour ();
   mm = minute (tnow); //NTP.getMinute ();
   ss = second (tnow); //NTP.getSecond ();
@@ -1604,7 +1615,7 @@ void loop ()
     draw_animations (i);
     //
   }
-  //check sunset/sunrise on minute change only
+  //check OTA update and sunset/sunrise on minute change only
   if (mm != prevmm)
   {
     //check for OTA updates
