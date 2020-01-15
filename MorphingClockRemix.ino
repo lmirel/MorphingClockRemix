@@ -29,6 +29,8 @@ PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
             do { if (DEBUG) Serial.println(__VA_ARGS__); } while (0)
 #define debug_print(...) \
             do { if (DEBUG) Serial.print(__VA_ARGS__); } while (0)
+#define debug_printf(...) \
+            do { if (DEBUG) Serial.printf(__VA_ARGS__); } while (0)
 
 #include <TimeLib.h>
 #include <NtpClientLib.h>
@@ -64,7 +66,25 @@ byte wifimac[6];                     // the MAC address of your Wifi shield
 IPAddress ap_static_ip(192,168,4,1);
 IPAddress ap_static_nm(255,255,255,0);
 #define USE_SERIAL Serial
-
+byte prevhh = 0;
+byte prevmm = 0;
+byte prevss = 0;
+long tnow;
+unsigned char dbri = 255;
+#define FIREWORKS_DISPLAY 10//sec
+#define FIREWORKS_LOOP    50//ms
+WiFiClient httpcli;
+//weather
+const char server[]   = "api.openweathermap.org";
+int tempMin = -10000;
+int tempMax = -10000;
+int tempM = -10000;
+int presM = -10000;
+int humiM = -10000;
+int condM = -1;  //-1 - undefined, 0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
+int tmsunrise = 0;//"sunrise":1575096078,"sunset":1575127409
+int tmsunset = 0;
+String condS = "";
 // Pins for LED MATRIX
 PxMATRIX display(64, 32, P_LAT, P_OE, P_A, P_B, P_C, P_D, P_E);
 #include "TinyFont.h"
@@ -369,17 +389,6 @@ void setup ()
   debug_println ("]");
 }
 
-const char server[]   = "api.openweathermap.org";
-WiFiClient client;
-int tempMin = -10000;
-int tempMax = -10000;
-int tempM = -10000;
-int presM = -10000;
-int humiM = -10000;
-int condM = -1;  //-1 - undefined, 0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
-int tmsunrise = 0;//"sunrise":1575096078,"sunset":1575127409
-int tmsunset = 0;
-String condS = "";
 void getWeather ()
 {
   if (!apiKey.length ())
@@ -389,18 +398,18 @@ void getWeather ()
   }
   debug_print ("i:connecting to weather server.. "); 
   // if you get a connection, report back via serial: 
-  if (client.connect (server, 80))
+  if (httpcli.connect (server, 80))
   { 
     debug_println ("connected."); 
     // Make a HTTP request: 
-    client.print ("GET /data/2.5/weather?"); 
-    client.print ("q="+location); 
-    client.print ("&appid="+apiKey); 
-    client.print ("&cnt=1"); 
-    (*u_metric=='Y')?client.println ("&units=metric"):client.println ("&units=imperial");
-    client.println ("Host: api.openweathermap.org"); 
-    client.println ("Connection: close");
-    client.println (); 
+    httpcli.print ("GET /data/2.5/weather?"); 
+    httpcli.print ("q="+location); 
+    httpcli.print ("&appid="+apiKey); 
+    httpcli.print ("&cnt=1"); 
+    (*u_metric=='Y')?httpcli.println ("&units=metric"):httpcli.println ("&units=imperial");
+    httpcli.println ("Host: api.openweathermap.org"); 
+    httpcli.println ("Connection: close");
+    httpcli.println (); 
   } 
   else 
   { 
@@ -411,7 +420,7 @@ void getWeather ()
   String sval = "";
   int bT, bT2;
   //do your best
-  String line = client.readStringUntil ('\n');
+  String line = httpcli.readStringUntil ('\n');
   if (!line.length ())
     debug_println ("w:unable to retrieve weather data");
   else
@@ -866,7 +875,6 @@ void draw_weather ()
   xo = 0; yo = 1;
   TFDrawText (&display, String("                   "), xo, yo, cc_dgr);
   //
-  long tnow = now ();
   if (ap_mode && year(tnow) == 1970)
   {
     //show AP ip
@@ -1003,7 +1011,6 @@ void draw_date ()
   xo = 3*TF_COLS; yo = 26;
   debug_println ("showing the date");
   //
-  long tnow = now ();
   if (ap_mode && year(tnow) == 1970)
   {
     //show AP ip
@@ -1301,15 +1308,6 @@ char hexchar2code (const char *hb)
   return *hb - '0';
 }
 
-byte prevhh = 0;
-byte prevmm = 0;
-byte prevss = 0;
-long tnow;
-unsigned char dbri = 255;
-#define FIREWORKS_DISPLAY 10//sec
-#define FIREWORKS_LOOP    50//ms
-WiFiClient httpcli;
-
 //handle web server requests
 void web_server ()
 {
@@ -1533,7 +1531,6 @@ void web_server ()
     if (rst)
       ESP.reset();
     //turn off wifi if in ap mode with date&time
-    long tnow = now ();
     if (ap_mode && year(tnow) > 1970)
     {
       WiFi.disconnect();
@@ -1557,7 +1554,7 @@ void update_error(int err) {
 #endif
 
 void update_progress(int cur, int total) {
-  USE_SERIAL.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
+  debug_printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
   //show percentage
   TFDrawText (&display, "OTA ", 0, 1, display.color565 (50, 0, 0));
   String prc = String(cur * 100 / total) + "% ";
@@ -1676,15 +1673,15 @@ void loop ()
       switch (ret) 
       {
         case HTTP_UPDATE_FAILED:
-          USE_SERIAL.printf("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+          debug_printf("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
           break;
   
         case HTTP_UPDATE_NO_UPDATES:
-          USE_SERIAL.println("HTTP_UPDATE_NO_UPDATES");
+          debug_printf("HTTP_UPDATE_NO_UPDATES");
           break;
   
         case HTTP_UPDATE_OK:
-          USE_SERIAL.println("HTTP_UPDATE_OK");
+          //debug_printf("HTTP_UPDATE_OK"); //will never show due to reboot
           break;
       }
     }
