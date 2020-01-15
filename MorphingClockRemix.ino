@@ -24,7 +24,7 @@ Time 1.5 by Michael Margolis https://github.com/PaulStoffregen/Time
 NtpClientLib 3.0.2-beta by Germán Martín https://github.com/gmag11/NtpClient
 PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 */
-#define DEBUG 1
+#define DEBUG 0 //2% memory use
 #define debug_println(...) \
             do { if (DEBUG) Serial.println(__VA_ARGS__); } while (0)
 #define debug_print(...) \
@@ -39,8 +39,8 @@ PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 #define double_buffer
 #include <PxMatrix.h>
 
-#define USE_ICONS         //2% mem use - short: 1% mem use
-#define USE_WEATHER_ANI   //4% mem use - short: 2% mem use
+#define USE_ICONS         //1% mem use
+#define USE_WEATHER_ANI   //2% mem use
 #define USE_FIREWORKS     //1% mem use
 
 #include "FS.h"
@@ -1564,6 +1564,7 @@ void update_progress(int cur, int total) {
   TFDrawText (&display, prc, 8*TF_COLS, 1, display.color565 (50, 0, 0));
 }
 
+unsigned char rwmm = 0; //random weather minute reading: twice per hour
 void loop ()
 {
 	static int i = 0;
@@ -1584,6 +1585,18 @@ void loop ()
   hh = hour (tnow);   //NTP.getHour ();
   mm = minute (tnow); //NTP.getMinute ();
   ss = second (tnow); //NTP.getSecond ();
+  //randomize weather reading once we have time sync
+  if (rwmm == 0 && mm > 0)
+  {
+    randomSeed(tnow);
+    rwmm = (unsigned char)random(30);
+    if (rwmm == 0)
+      rwmm = 1;
+    debug_print("random weather reading at min ");
+    debug_print(rwmm);
+    debug_print(" and ");
+    debug_println(rwmm + 30);
+  }
   //animations?
   cm = millis ();
   //
@@ -1774,9 +1787,12 @@ void loop ()
       if (s1 != digit1.Value ()) digit1.Morph (s1);
       //ntpClient.PrintTime();
       prevss = ss;
-      //refresh weather every 5mins at 30sec in the minute
-      if (ss == 30 && ((mm % 5) == 0))
-        getWeather ();
+      //refresh weather twice an hour based on random minute
+      if (rwmm > 0)
+      {
+        if (ss == 30 && (mm == rwmm || mm == (rwmm + 30)))
+          getWeather ();
+      }
     }
     //minutes
     if (mm != prevmm)
