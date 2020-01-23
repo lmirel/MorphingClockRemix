@@ -387,6 +387,16 @@ void setup ()
   debug_print (" .. ");
   debug_print (display.color565 (255, 255, 255));
   debug_println ("]");
+  //leds off
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+  #if 0
+  pinMode(2, OUTPUT);
+  digitalWrite(2, LOW);
+  delay(1000);
+  digitalWrite(2, HIGH);
+  delay(2000);
+  #endif
 }
 
 void getWeather ()
@@ -818,6 +828,16 @@ void draw_weather_conditions ()
   switch (condM)
   {
     case 0://unk
+    {
+      xo = 3*TF_COLS; yo = 1;
+      debug_print ("!weather condition icon unknown, show: ");
+      debug_println (condS);
+      int cc_dgr = display.color565 (30, 30, 30);
+      //draw the first 5 letters from the unknown weather condition
+      String lstr = condS.substring (0, (condS.length () > 5?5:condS.length ()));
+      lstr.toUpperCase ();
+      TFDrawText (&display, lstr, xo, yo, cc_dgr);
+    }
       break;
     case 1://sunny
       if (!daytime)
