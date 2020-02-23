@@ -3,7 +3,7 @@ Remix from HarryFun's great Morphing Digital Clock idea https://www.instructable
 Follow the great tutorial there and eventually use this code as alternative.
 ![alt text](https://raw.githubusercontent.com/lmirel/MorphingClockRemix/master/MorphingClockRemix.jpg?raw=true)
 
-- main code is based on the NTPClient lib example for ESP, the lib itself is used as is for NTP sync https://github.com/2dom/NtpClient which in turn relies on https://github.com/PaulStoffregen/Time.git
+- main code is based on the NTPClient lib example for ESP, the lib itself is used as is for NTP sync https://github.com/2dom/NtpClient which in turn relies on https://github.com/PaulStoffregen/Time.git version 1.5
 - use fast NTP sync on start then adapt to one sync per day (or so)
 - 12/24h time format
 - date format and display below the clock
