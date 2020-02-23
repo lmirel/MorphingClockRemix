@@ -18,9 +18,9 @@ Follow the great tutorial there and eventually use this code as alternative.
 - fireworks for special ocasions ;-)= adapted for Arduino from https://r3dux.org/2010/10/how-to-create-a-simple-fireworks-effect-in-opengl-and-sdl/
 
 depends on following libraries:
-Time 1.5 by Michael Margolis https://github.com/PaulStoffregen/Time
-NtpClientLib 3.0.2-beta by Germán Martín https://github.com/gmag11/NtpClient
-PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
+- Time 1.5 by Michael Margolis https://github.com/PaulStoffregen/Time
+- NtpClientLib 3.0.2-beta by Germán Martín https://github.com/gmag11/NtpClient
+- PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 
 [Note]: In case you have issues running the WiFi configuration applet, disable ICONS usage.
 
