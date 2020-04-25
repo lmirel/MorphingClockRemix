@@ -40,3 +40,5 @@ use /timezone/x for specific timezone 'x'
 tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
 
 provided 'AS IS', use at your own risk
+
+consider a small donation if you feel this helped you: https://paypal.me/lazarmirel
