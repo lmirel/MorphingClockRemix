@@ -24,7 +24,7 @@ Time 1.5 by Michael Margolis https://github.com/PaulStoffregen/Time
 NtpClientLib 3.0.2-beta by Germán Martín https://github.com/gmag11/NtpClient
 PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 */
-#define DEBUG 0 //2% memory use
+#define DEBUG 1 //2% memory use
 #define debug_println(...) \
             do { if (DEBUG) Serial.println(__VA_ARGS__); } while (0)
 #define debug_print(...) \
@@ -38,7 +38,7 @@ PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 #include <DNSServer.h>
 #include <ESP8266httpUpdate.h>
 
-#define double_buffer
+//#define PxMATRIX_double_buffer true
 #include <PxMatrix.h>
 
 #define USE_ICONS         //1% mem use
@@ -236,8 +236,10 @@ void setup ()
     delay (500); //delay for Leonardo
   //display setup
   display.begin (16);
+  display.setFastUpdate(true);
 #ifdef ESP8266
   display_ticker.attach (0.002, display_updater);
+  debug_println ("ticker attached");
 #endif
   //read variables
   int cstore = 0;
@@ -269,6 +271,11 @@ void setup ()
   {
     cstore++;
     strncpy(c_vars[EV_OWMK], apiKey.c_str(), LVARS * 3);
+  }
+  if (c_vars[EV_GEOLOC][0] == '\0')
+  {
+    cstore++;
+    strncpy(c_vars[EV_GEOLOC], location.c_str(), LVARS * 3);
   }
   //
   if (cstore)
@@ -401,9 +408,9 @@ void setup ()
 
 void getWeather ()
 {
-  if (!apiKey.length ())
+  if (!*c_vars[EV_OWMK] || !*c_vars[EV_GEOLOC])
   {
-    debug_println ("w:missing API KEY for weather data, skipping"); 
+    debug_println ("w:missing API KEY/location for weather data, skipping"); 
     return;
   }
   debug_print ("i:connecting to weather server.. "); 
@@ -413,8 +420,8 @@ void getWeather ()
     debug_println ("connected."); 
     // Make a HTTP request: 
     httpcli.print ("GET /data/2.5/weather?"); 
-    httpcli.print ("q="+location); 
-    httpcli.print ("&appid="+apiKey); 
+    httpcli.print ("q="+String(c_vars[EV_GEOLOC])); 
+    httpcli.print ("&appid="+String(c_vars[EV_OWMK]));
     httpcli.print ("&cnt=1"); 
     (*u_metric=='Y')?httpcli.println ("&units=metric"):httpcli.println ("&units=imperial");
     httpcli.println ("Host: api.openweathermap.org"); 
@@ -530,7 +537,7 @@ void getWeather ()
     bT = line.indexOf ("\"sunset\":");
     if (bT > 0)
     {
-      tmsunset = line.substring (bT + 9).toInt() + 3600 * String (c_vars[EV_TZ]).toInt(); //add TZ to UTC sunrise
+      tmsunset = line.substring (bT + 9).toInt() + 3600 * String (c_vars[EV_TZ]).toInt() + (toBool (String (c_vars[EV_DST]))?3600:0); //add TZ and daylight saving to UTC sunset
       debug_print ("sunset ");
       debug_println (tmsunset);
     }
@@ -542,7 +549,7 @@ void getWeather ()
     bT = line.indexOf ("\"sunrise\":");
     if (bT > 0)
     {
-      tmsunrise = line.substring (bT + 10).toInt() + 3600 * String (c_vars[EV_TZ]).toInt(); //add TZ to UTC sunrise
+      tmsunrise = line.substring (bT + 10).toInt() + 3600 * String (c_vars[EV_TZ]).toInt() + (toBool (String (c_vars[EV_DST]))?3600:0); //add TZ and DST to UTC sunrise
       debug_print ("sunrise ");
       debug_println (tmsunrise);
     }
@@ -1385,6 +1392,7 @@ void web_server ()
         debug_println ("");
       }
     }
+    //OTA
     else if (httprq.indexOf ("GET /ota/") != -1)
     {
       //GET /ota/?otaloc=192.168.2.38%3A8000%2Fespweather.bin HTTP/1.1
@@ -1421,6 +1429,36 @@ void web_server ()
       //
       debug_print (">ota:");
       debug_println (c_vars[EV_OTA]);
+      //
+    }
+    //location
+    else if (httprq.indexOf ("GET /geoloc/") != -1)
+    {
+      pidx = httprq.indexOf ("?geoloc=");
+      int pidx2 = httprq.indexOf (" HTTP/", pidx);
+      if (pidx2 > 0)
+      {
+        strncpy(c_vars[EV_GEOLOC], httprq.substring(pidx + 8, pidx2).c_str(), LVARS * 3);
+        svf = 1;
+      }
+      //
+      debug_print (">location:");
+      debug_println (c_vars[EV_GEOLOC]);
+      //
+    }
+    //openweathermap.org key
+    else if (httprq.indexOf ("GET /owm/") != -1)
+    {
+      pidx = httprq.indexOf ("?owmkey=");
+      int pidx2 = httprq.indexOf (" HTTP/", pidx);
+      if (pidx2 > 0)
+      {
+        strncpy(c_vars[EV_OWMK], httprq.substring(pidx + 8, pidx2).c_str(), LVARS * 3);
+        svf = 1;
+      }
+      //
+      debug_print (">owm key:");
+      debug_println (c_vars[EV_OWMK]);
       //
     }
     else if (httprq.indexOf ("GET /wifi/") != -1)
@@ -1505,6 +1543,17 @@ void web_server ()
     httprsp += "<a href='/brightness/100'>brightness 100</a><br>";
     httprsp += "<a href='/brightness/200'>brightness 200</a><br>";
     httprsp += "use /brightness/x for display brightness 'x' from 0 (darkest) to 255 (brightest)<br>";
+    //openweathermap.org
+    httprsp += "<br>openweathermap.org API key<br>";
+    httprsp += "<form action='/owm/'>" \
+      "http://<input type='text' name='owmkey' value='" + String(c_vars[EV_OWMK]) + "'>(hex string)<br>" \
+      "<input type='submit' value='set OWM key'></form><br>";
+    //geo location
+    httprsp += "<br>location: city,country<br>";
+    httprsp += "<form action='/geoloc/'>" \
+      "http://<input type='text' name='geoloc' value='" + String(c_vars[EV_GEOLOC]) + "'>(e.g.: Paris,FR)<br>" \
+      "<input type='submit' value='set Location'></form><br>";
+    //OTA
     httprsp += "<br>OTA update configuration (every minute)<br>";
     httprsp += "<form action='/ota/'>" \
       "http://<input type='text' name='otaloc' value='" + String(c_vars[EV_OTA]) + "'>(ip address:port/filename)<br>" \
