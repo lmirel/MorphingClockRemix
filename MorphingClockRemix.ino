@@ -25,7 +25,7 @@ provided 'AS IS', use at your own risk
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h> //https://github.com/tzapu/WiFiManager
 char wifiManagerAPName[] = "MorphClk";
-char wifiManagerAPPassword[] = "boogaloo";
+char wifiManagerAPPassword[] = "MorphClk";
 
 //== DOUBLE-RESET DETECTOR ==
 #include <DoubleResetDetector.h>
@@ -326,7 +326,7 @@ void setup(){
 }
 
 //open weather map api key 
-String apiKey   = "ca1a7bdba9574adefbba2361ba980c6e"; //e.g a hex string like "abcdef0123456789abcdef0123456789"
+String apiKey   = ""; //e.g a hex string like "abcdef0123456789abcdef0123456789"
 //the city you want the weather for 
 String location = "Toronto,CA"; //e.g. "Paris,FR"
 char server[]   = "api.openweathermap.org";
