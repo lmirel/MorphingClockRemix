@@ -871,8 +871,7 @@ TFFace tinyFont[] =
 
 const int cfblack = 0;
 
-void TFDrawChar (PxMATRIX* d, char value, char xo, char yo, int col)
-{
+void TFDrawChar (PxMATRIX* d, char value, char xo, char yo, int col){
   int i, j, cfi = value - ' ';
   if (cfi > (int)(sizeof (tinyFont) / sizeof (TFFace)))
   {
@@ -893,8 +892,7 @@ void TFDrawChar (PxMATRIX* d, char value, char xo, char yo, int col)
 }
 
 #define TFLINE_LEN  (64 / TF_COLS)
-void TFDrawText (PxMATRIX* d, String text, char xo, char yo, int col)
-{
+void TFDrawText (PxMATRIX* d, String text, char xo, char yo, int col){
   unsigned char lbuf[TFLINE_LEN+1] = {0};
   unsigned char *lptr = lbuf;
   text.getBytes (lbuf, TFLINE_LEN);
@@ -903,4 +901,3 @@ void TFDrawText (PxMATRIX* d, String text, char xo, char yo, int col)
     TFDrawChar (d, *lptr, xo, yo, col);
   }
 }
-
