@@ -45,7 +45,6 @@ void saveConfigCallback ()
   shouldSaveConfig = true;
 }
 
-#ifdef ESP8266
 #include <Ticker.h>
 Ticker display_ticker;
 #define P_LAT 16
@@ -55,7 +54,6 @@ Ticker display_ticker;
 #define P_D 12
 #define P_E 0
 #define P_OE 2
-#endif
 
 // This defines the 'on' time of the display is us. The larger this number,
 // the brighter the display. If too large the ESP will crash
@@ -74,14 +72,12 @@ Digit digit3(&display, 0, 63 - 4 - 9*4, 8, display.color565(0, 0, 255));
 Digit digit4(&display, 0, 63 - 7 - 9*5, 8, display.color565(0, 0, 255));
 Digit digit5(&display, 0, 63 - 7 - 9*6, 8, display.color565(0, 0, 255));
 
-#ifdef ESP8266
 // ISR for display refresh
 void display_updater ()
 {
   //display.displayTestPattern(display_draw_time);
   display.display (display_draw_time);
 }
-#endif
 
 void configModeCallback (WiFiManager *myWiFiManager) 
 {
@@ -294,9 +290,7 @@ void setup()
   display.begin (16);
   display.setMuxDelay(0,1,0,0,0);
  
-#ifdef ESP8266
   display_ticker.attach (0.002, display_updater);
-#endif
 
   wifi_setup ();
 
