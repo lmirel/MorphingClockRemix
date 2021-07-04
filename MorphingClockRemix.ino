@@ -10,7 +10,7 @@ provided 'AS IS', use at your own risk
 #include <NtpClientLib.h>
 #include <ESP8266WiFi.h>
 
-#define double_buffer
+#define PXMATRIX_double_buffer true
 #include <PxMatrix.h>
 
 //#define USE_ICONS
@@ -57,6 +57,10 @@ Ticker display_ticker;
 #define P_OE 2
 #endif
 
+// This defines the 'on' time of the display is us. The larger this number,
+// the brighter the display. If too large the ESP will crash
+uint8_t display_draw_time=60; //30-70 is usually fine
+
 // Pins for LED MATRIX
 PxMATRIX display(64, 32, P_LAT, P_OE, P_A, P_B, P_C, P_D, P_E);
 
@@ -74,12 +78,10 @@ Digit digit5(&display, 0, 63 - 7 - 9*6, 8, display.color565(0, 0, 255));
 // ISR for display refresh
 void display_updater ()
 {
-  //display.displayTestPattern(70);
-  display.display (70);
+  //display.displayTestPattern(display_draw_time);
+  display.display (display_draw_time);
 }
 #endif
-
-void getWeather ();
 
 void configModeCallback (WiFiManager *myWiFiManager) 
 {
@@ -97,6 +99,7 @@ char timezone[5] = "0";
 char military[3] = "Y";     // 24 hour mode? Y/N
 char u_metric[3] = "Y";     // use metric for units? Y/N
 char date_fmt[7] = "D.M.Y"; // date format: D.M.Y or M.D.Y or M.D or D.M or D/M/Y.. looking for trouble
+
 bool loadConfig () 
 {
   File configFile = SPIFFS.open ("/config.json", "r");
@@ -118,26 +121,28 @@ bool loadConfig ()
 
   configFile.readBytes (buf.get(), size);
 
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& json = jsonBuffer.parseObject(buf.get());
+  StaticJsonDocument<200> jsonDoc;
+  auto error = deserializeJson(jsonDoc, buf.get());
 
-  if (!json.success ()) 
+  if (error) 
   {
-    Serial.println("Failed to parse config file");
+    Serial.print(F("deserializeJson() failed with code "));
+    Serial.println(error.c_str());
     return false;
   }
 
-  strcpy (timezone, json["timezone"]);
-  strcpy (military, json["military"]);
+  strcpy (timezone, jsonDoc["timezone"]);
+  strcpy (military, jsonDoc["military"]);
+  
   //avoid reboot loop on systems where this is not set
-  if (json.get<const char*>("metric"))
-    strcpy (u_metric, json["metric"]);
+  if (jsonDoc["metric"])
+    strcpy (u_metric, jsonDoc["metric"]);
   else
   {
     Serial.println ("metric units not set, using default: Y");
   }
-  if (json.get<const char*>("date-format"))
-    strcpy (date_fmt, json["date-format"]);
+  if (jsonDoc["date-format"])
+    strcpy (date_fmt, jsonDoc["date-format"]);
   else
   {
     Serial.println ("date format not set, using default: D.M.Y");
@@ -148,12 +153,11 @@ bool loadConfig ()
 
 bool saveConfig () 
 {
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
-  json["timezone"] = timezone;
-  json["military"] = military;
-  json["metric"] = u_metric;
-  json["date-format"] = date_fmt;
+  StaticJsonDocument<200> jsonDoc;
+  jsonDoc["timezone"] = timezone;
+  jsonDoc["military"] = military;
+  jsonDoc["metric"] = u_metric;
+  jsonDoc["date-format"] = date_fmt;
 
   File configFile = SPIFFS.open ("/config.json", "w");
   if (!configFile)
@@ -172,7 +176,7 @@ bool saveConfig ()
   Serial.print ("date-format=");
   Serial.println (date_fmt);
 
-  json.printTo (configFile);
+  serializeJson(jsonDoc, configFile);
   return true;
 }
 
@@ -180,6 +184,7 @@ bool saveConfig ()
 const byte row0 = 2+0*10;
 const byte row1 = 2+1*10;
 const byte row2 = 2+2*10;
+
 void wifi_setup ()
 {
   //-- Config --
@@ -281,18 +286,20 @@ byte hh;
 byte mm;
 byte ss;
 byte ntpsync = 1;
-//
+
 void setup()
 {	
 	Serial.begin (115200);
-  //display setup
+ 
   display.begin (16);
+  display.setMuxDelay(0,1,0,0,0);
+ 
 #ifdef ESP8266
   display_ticker.attach (0.002, display_updater);
 #endif
-  //
+
   wifi_setup ();
-  //
+
 	NTP.onNTPSyncEvent ([](NTPSyncEvent_t ntpEvent) 
 	{
 		if (ntpEvent) 
@@ -334,7 +341,7 @@ void setup()
 //open weather map api key 
 String apiKey   = ""; //e.g a hex string like "abcdef0123456789abcdef0123456789"
 //the city you want the weather for 
-String location = "Muenchen,DE"; //e.g. "Paris,FR"
+String location = "Toronto,CA"; //e.g. "Paris,FR"
 char server[]   = "api.openweathermap.org";
 WiFiClient client;
 int tempMin = -10000;
@@ -344,6 +351,7 @@ int presM = -10000;
 int humiM = -10000;
 int condM = -1;  //-1 - undefined, 0 - unk, 1 - sunny, 2 - cloudy, 3 - overcast, 4 - rainy, 5 - thunders, 6 - snow
 String condS = "";
+
 void getWeather ()
 {
   if (!apiKey.length ())
@@ -1384,5 +1392,6 @@ void loop()
   }
   //
 	//delay (0);
-}
 
+  display.showBuffer();
+}
