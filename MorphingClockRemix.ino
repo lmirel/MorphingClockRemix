@@ -333,8 +333,9 @@ void setup()
 
 //open weather map api key 
 String apiKey   = ""; //e.g a hex string like "abcdef0123456789abcdef0123456789"
-//the city you want the weather for 
-String location = "Muenchen,DE"; //e.g. "Paris,FR"
+//Find your city on openweathermap.org, and use the trailing seven digits in the URL.
+//ex: https://openweathermap.org/city/2867714
+String location = "2867714"; 
 char server[]   = "api.openweathermap.org";
 WiFiClient client;
 int tempMin = -10000;
@@ -358,7 +359,7 @@ void getWeather ()
     Serial.println ("connected."); 
     // Make a HTTP request: 
     client.print ("GET /data/2.5/weather?"); 
-    client.print ("q="+location); 
+    client.print ("id="+location); 
     client.print ("&appid="+apiKey); 
     client.print ("&cnt=1"); 
     (*u_metric=='Y')?client.println ("&units=metric"):client.println ("&units=imperial");
