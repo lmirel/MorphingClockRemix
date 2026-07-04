@@ -198,6 +198,22 @@ uint16_t Digit::DimColor(uint16_t c, byte scale)
   return _display->color565(r, g, b);
 }
 
+uint16_t Digit::MinColor(uint16_t c, byte minimum)
+{
+  byte r = ((c >> 11) & 0x1F) << 3;
+  byte g = ((c >> 5) & 0x3F) << 2;
+  byte b = (c & 0x1F) << 3;
+
+  if (r > 0 && r < minimum)
+    r = minimum;
+  if (g > 0 && g < minimum)
+    g = minimum;
+  if (b > 0 && b < minimum)
+    b = minimum;
+
+  return _display->color565(r, g, b);
+}
+
 void Digit::Clear()
 {
   for (int y = 0; y <= segHeight * 2 + 2; y++)
@@ -329,13 +345,14 @@ void Digit::Wipe(byte newValue)
 
 void Digit::Fade(byte newValue)
 {
-  const byte fadeSteps[] = {80, 48, 24};
+  const byte fadeSteps[] = {180, 120, 70, 35};
+  uint16_t traceColor = MinColor(_color, 70);
 
   for (byte i = 0; i < sizeof(fadeSteps); i++) {
     Clear();
-    DrawClipped(_value, 0, segHeight * 2 + 2, DimColor(_color, fadeSteps[i]));
+    DrawClipped(_value, 0, segHeight * 2 + 2, DimColor(traceColor, fadeSteps[i]));
     DrawClipped(newValue, 0, segHeight * 2 + 2, _color);
-    delay(45);
+    delay(55);
   }
 
   Clear();

@@ -43,6 +43,7 @@ class Digit {
     void drawSegShiftedClipped(byte seg, int yOffset, int yMin, int yMax, uint16_t c);
     void DrawShiftedClipped(byte value, int yOffset, int yMin, int yMax, uint16_t c);
     uint16_t DimColor(uint16_t c, byte scale);
+    uint16_t MinColor(uint16_t c, byte minimum);
     void Clear();
     void Flip(byte newValue);
     void Roll(byte newValue);
