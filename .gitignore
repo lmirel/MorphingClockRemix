@@ -2,3 +2,6 @@ params.h
 .pio/
 .vscode/
 *.bin
+*.off
+scripts/
+TODO.md

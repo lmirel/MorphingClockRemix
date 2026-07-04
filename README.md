@@ -78,11 +78,19 @@ http://[esp-ip]/animation/morph
 http://[esp-ip]/animation/flip
 http://[esp-ip]/animation/roll
 http://[esp-ip]/animation/odometer
+http://[esp-ip]/animation/bounce
+http://[esp-ip]/animation/slot
+http://[esp-ip]/animation/wipe
+http://[esp-ip]/animation/fade
+http://[esp-ip]/animation/shuffle
 ```
 
 The flip mode is a split-flap style digit animation. The roll mode scrolls
 digits vertically like a small mechanical tumbler wheel. The odometer mode uses
-roll with delayed carry cascades across seconds, minutes, and hours. The
-animation selection is kept in RAM and resets to morph mode after reboot.
+roll with delayed carry cascades across seconds, minutes, and hours. Bounce adds
+a small landing jiggle to roll, slot briefly overshoots through preview digits,
+wipe slides digits through a center divider, fade leaves a dim trace, and shuffle
+briefly shows random digits before landing. The animation selection is kept in
+RAM and resets to morph mode after reboot.
 <br>
 provided 'AS IS', use at your own risk

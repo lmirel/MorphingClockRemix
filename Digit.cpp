@@ -185,6 +185,19 @@ void Digit::DrawShiftedClipped(byte value, int yOffset, int yMin, int yMax, uint
   if (bitRead(pattern, 1)) drawSegShiftedClipped(sG, yOffset, yMin, yMax, c);
 }
 
+uint16_t Digit::DimColor(uint16_t c, byte scale)
+{
+  byte r = ((c >> 11) & 0x1F) << 3;
+  byte g = ((c >> 5) & 0x3F) << 2;
+  byte b = (c & 0x1F) << 3;
+
+  r = ((uint16_t)r * scale) / 255;
+  g = ((uint16_t)g * scale) / 255;
+  b = ((uint16_t)b * scale) / 255;
+
+  return _display->color565(r, g, b);
+}
+
 void Digit::Clear()
 {
   for (int y = 0; y <= segHeight * 2 + 2; y++)
@@ -258,6 +271,88 @@ void Digit::Roll(byte newValue)
     DrawShiftedClipped(_value, -i, 0, digitHeight, _color);
     DrawShiftedClipped(newValue, travel - i, 0, digitHeight, _color);
     delay(rollDelay);
+  }
+
+  Clear();
+  Draw(newValue);
+}
+
+void Digit::Bounce(byte newValue)
+{
+  const int digitHeight = segHeight * 2 + 2;
+
+  Roll(newValue);
+
+  Clear();
+  DrawShiftedClipped(newValue, -1, 0, digitHeight, _color);
+  delay(35);
+  Clear();
+  DrawShiftedClipped(newValue, 1, 0, digitHeight, _color);
+  delay(35);
+  Clear();
+  Draw(newValue);
+}
+
+void Digit::Slot(byte newValue)
+{
+  const int slotDelay = max(20, animSpeed);
+
+  for (byte i = 0; i < 3; i++) {
+    byte preview = (newValue + 3 - i) % 10;
+    if (preview == _value || preview == newValue)
+      preview = (preview + 5) % 10;
+    Clear();
+    Draw(preview);
+    delay(slotDelay);
+  }
+
+  Roll(newValue);
+}
+
+void Digit::Wipe(byte newValue)
+{
+  const int digitHeight = segHeight * 2 + 2;
+  const int travel = digitHeight + 2;
+  const int wipeDelay = max(8, animSpeed / 2);
+
+  for (int i = 0; i <= travel; i++) {
+    Clear();
+    DrawShiftedClipped(_value, i, 0, digitHeight, _color);
+    DrawShiftedClipped(newValue, i - travel, 0, digitHeight, _color);
+    drawLine(0, segHeight + 1, segWidth + 1, segHeight + 1, DimColor(_color, 120));
+    delay(wipeDelay);
+  }
+
+  Clear();
+  Draw(newValue);
+}
+
+void Digit::Fade(byte newValue)
+{
+  const byte fadeSteps[] = {80, 48, 24};
+
+  for (byte i = 0; i < sizeof(fadeSteps); i++) {
+    Clear();
+    DrawClipped(_value, 0, segHeight * 2 + 2, DimColor(_color, fadeSteps[i]));
+    DrawClipped(newValue, 0, segHeight * 2 + 2, _color);
+    delay(45);
+  }
+
+  Clear();
+  Draw(newValue);
+}
+
+void Digit::Shuffle(byte newValue)
+{
+  const int shuffleDelay = max(20, animSpeed);
+
+  for (byte i = 0; i < 3; i++) {
+    byte preview = random(10);
+    if (preview == _value || preview == newValue)
+      preview = (preview + 4 + i) % 10;
+    Clear();
+    Draw(preview);
+    delay(shuffleDelay);
   }
 
   Clear();
@@ -461,6 +556,31 @@ void Digit::Morph(byte newValue, byte animationMode) {
   }
   if (animationMode == DIGIT_ANIMATION_ROLL) {
     Roll(newValue);
+    _value = newValue;
+    return;
+  }
+  if (animationMode == DIGIT_ANIMATION_BOUNCE) {
+    Bounce(newValue);
+    _value = newValue;
+    return;
+  }
+  if (animationMode == DIGIT_ANIMATION_SLOT) {
+    Slot(newValue);
+    _value = newValue;
+    return;
+  }
+  if (animationMode == DIGIT_ANIMATION_WIPE) {
+    Wipe(newValue);
+    _value = newValue;
+    return;
+  }
+  if (animationMode == DIGIT_ANIMATION_FADE) {
+    Fade(newValue);
+    _value = newValue;
+    return;
+  }
+  if (animationMode == DIGIT_ANIMATION_SHUFFLE) {
+    Shuffle(newValue);
     _value = newValue;
     return;
   }

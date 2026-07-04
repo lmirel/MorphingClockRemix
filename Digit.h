@@ -9,6 +9,11 @@
 #define DIGIT_ANIMATION_FLIP  1
 #define DIGIT_ANIMATION_ROLL  2
 #define DIGIT_ANIMATION_ODOMETER 3
+#define DIGIT_ANIMATION_BOUNCE 4
+#define DIGIT_ANIMATION_SLOT 5
+#define DIGIT_ANIMATION_WIPE 6
+#define DIGIT_ANIMATION_FADE 7
+#define DIGIT_ANIMATION_SHUFFLE 8
 
 class Digit {
   
@@ -37,9 +42,15 @@ class Digit {
     void DrawClipped(byte value, int yMin, int yMax, uint16_t c);
     void drawSegShiftedClipped(byte seg, int yOffset, int yMin, int yMax, uint16_t c);
     void DrawShiftedClipped(byte value, int yOffset, int yMin, int yMax, uint16_t c);
+    uint16_t DimColor(uint16_t c, byte scale);
     void Clear();
     void Flip(byte newValue);
     void Roll(byte newValue);
+    void Bounce(byte newValue);
+    void Slot(byte newValue);
+    void Wipe(byte newValue);
+    void Fade(byte newValue);
+    void Shuffle(byte newValue);
     void Morph2();
     void Morph3();
     void Morph4();

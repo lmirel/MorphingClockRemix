@@ -1551,6 +1551,36 @@ void web_server ()
       httprsp += "<strong>animation: odometer</strong><br>";
       debug_println (">animation: odometer");
     }
+    else if (httprq.indexOf ("GET /animation/bounce ") != -1)
+    {
+      digit_anim = DIGIT_ANIMATION_BOUNCE;
+      httprsp += "<strong>animation: bounce</strong><br>";
+      debug_println (">animation: bounce");
+    }
+    else if (httprq.indexOf ("GET /animation/slot ") != -1)
+    {
+      digit_anim = DIGIT_ANIMATION_SLOT;
+      httprsp += "<strong>animation: slot</strong><br>";
+      debug_println (">animation: slot");
+    }
+    else if (httprq.indexOf ("GET /animation/wipe ") != -1)
+    {
+      digit_anim = DIGIT_ANIMATION_WIPE;
+      httprsp += "<strong>animation: wipe</strong><br>";
+      debug_println (">animation: wipe");
+    }
+    else if (httprq.indexOf ("GET /animation/fade ") != -1)
+    {
+      digit_anim = DIGIT_ANIMATION_FADE;
+      httprsp += "<strong>animation: fade</strong><br>";
+      debug_println (">animation: fade");
+    }
+    else if (httprq.indexOf ("GET /animation/shuffle ") != -1)
+    {
+      digit_anim = DIGIT_ANIMATION_SHUFFLE;
+      httprsp += "<strong>animation: shuffle</strong><br>";
+      debug_println (">animation: shuffle");
+    }
     else if ((pidx = httprq.indexOf ("GET /timezone/")) != -1)
     {
       int pidx2 = httprq.indexOf (" ", pidx + 14);
@@ -1590,6 +1620,11 @@ void web_server ()
     httprsp += "<a href='/animation/flip'>animation flip</a><br>";
     httprsp += "<a href='/animation/roll'>animation roll</a><br>";
     httprsp += "<a href='/animation/odometer'>animation odometer</a><br>";
+    httprsp += "<a href='/animation/bounce'>animation bounce</a><br>";
+    httprsp += "<a href='/animation/slot'>animation slot</a><br>";
+    httprsp += "<a href='/animation/wipe'>animation wipe</a><br>";
+    httprsp += "<a href='/animation/fade'>animation fade</a><br>";
+    httprsp += "<a href='/animation/shuffle'>animation shuffle</a><br>";
     //openweathermap.org
     httprsp += "<br>openweathermap.org API key<br>";
     httprsp += "<form action='/owm/'>" \
