@@ -88,6 +88,109 @@ void Digit::drawSeg(byte seg)
   }
 }
 
+void Digit::drawSegClipped(byte seg, int yMin, int yMax, uint16_t c)
+{
+  int x1 = 0;
+  int y1 = 0;
+  int x2 = 0;
+  int y2 = 0;
+
+  switch (seg) {
+    case sA: x1 = 1; y1 = segHeight * 2 + 2; x2 = segWidth; y2 = y1; break;
+    case sB: x1 = segWidth + 1; y1 = segHeight * 2 + 1; x2 = x1; y2 = segHeight + 2; break;
+    case sC: x1 = segWidth + 1; y1 = 1; x2 = x1; y2 = segHeight; break;
+    case sD: x1 = 1; y1 = 0; x2 = segWidth; y2 = 0; break;
+    case sE: x1 = 0; y1 = 1; x2 = 0; y2 = segHeight; break;
+    case sF: x1 = 0; y1 = segHeight * 2 + 1; x2 = 0; y2 = segHeight + 2; break;
+    case sG: x1 = 1; y1 = segHeight + 1; x2 = segWidth; y2 = y1; break;
+  }
+
+  if (y1 == y2) {
+    if (y1 >= yMin && y1 <= yMax)
+      drawLine(x1, y1, x2, y2, c);
+    return;
+  }
+
+  if (y1 < y2) {
+    int tmp = y1;
+    y1 = y2;
+    y2 = tmp;
+  }
+
+  int clippedTop = min(y1, yMax);
+  int clippedBottom = max(y2, yMin);
+  if (clippedTop >= clippedBottom)
+    drawLine(x1, clippedTop, x2, clippedBottom, c);
+}
+
+void Digit::DrawClipped(byte value, int yMin, int yMax, uint16_t c)
+{
+  byte pattern = digitBits[value];
+  if (bitRead(pattern, 7)) drawSegClipped(sA, yMin, yMax, c);
+  if (bitRead(pattern, 6)) drawSegClipped(sB, yMin, yMax, c);
+  if (bitRead(pattern, 5)) drawSegClipped(sC, yMin, yMax, c);
+  if (bitRead(pattern, 4)) drawSegClipped(sD, yMin, yMax, c);
+  if (bitRead(pattern, 3)) drawSegClipped(sE, yMin, yMax, c);
+  if (bitRead(pattern, 2)) drawSegClipped(sF, yMin, yMax, c);
+  if (bitRead(pattern, 1)) drawSegClipped(sG, yMin, yMax, c);
+}
+
+void Digit::drawSegShiftedClipped(byte seg, int yOffset, int yMin, int yMax, uint16_t c)
+{
+  int x1 = 0;
+  int y1 = 0;
+  int x2 = 0;
+  int y2 = 0;
+
+  switch (seg) {
+    case sA: x1 = 1; y1 = segHeight * 2 + 2; x2 = segWidth; y2 = y1; break;
+    case sB: x1 = segWidth + 1; y1 = segHeight * 2 + 1; x2 = x1; y2 = segHeight + 2; break;
+    case sC: x1 = segWidth + 1; y1 = 1; x2 = x1; y2 = segHeight; break;
+    case sD: x1 = 1; y1 = 0; x2 = segWidth; y2 = 0; break;
+    case sE: x1 = 0; y1 = 1; x2 = 0; y2 = segHeight; break;
+    case sF: x1 = 0; y1 = segHeight * 2 + 1; x2 = 0; y2 = segHeight + 2; break;
+    case sG: x1 = 1; y1 = segHeight + 1; x2 = segWidth; y2 = y1; break;
+  }
+
+  y1 += yOffset;
+  y2 += yOffset;
+
+  if (y1 == y2) {
+    if (y1 >= yMin && y1 <= yMax)
+      drawLine(x1, y1, x2, y2, c);
+    return;
+  }
+
+  if (y1 < y2) {
+    int tmp = y1;
+    y1 = y2;
+    y2 = tmp;
+  }
+
+  int clippedTop = min(y1, yMax);
+  int clippedBottom = max(y2, yMin);
+  if (clippedTop >= clippedBottom)
+    drawLine(x1, clippedTop, x2, clippedBottom, c);
+}
+
+void Digit::DrawShiftedClipped(byte value, int yOffset, int yMin, int yMax, uint16_t c)
+{
+  byte pattern = digitBits[value];
+  if (bitRead(pattern, 7)) drawSegShiftedClipped(sA, yOffset, yMin, yMax, c);
+  if (bitRead(pattern, 6)) drawSegShiftedClipped(sB, yOffset, yMin, yMax, c);
+  if (bitRead(pattern, 5)) drawSegShiftedClipped(sC, yOffset, yMin, yMax, c);
+  if (bitRead(pattern, 4)) drawSegShiftedClipped(sD, yOffset, yMin, yMax, c);
+  if (bitRead(pattern, 3)) drawSegShiftedClipped(sE, yOffset, yMin, yMax, c);
+  if (bitRead(pattern, 2)) drawSegShiftedClipped(sF, yOffset, yMin, yMax, c);
+  if (bitRead(pattern, 1)) drawSegShiftedClipped(sG, yOffset, yMin, yMax, c);
+}
+
+void Digit::Clear()
+{
+  for (int y = 0; y <= segHeight * 2 + 2; y++)
+    drawLine(0, y, segWidth + 1, y, black);
+}
+
 void Digit::Draw(byte value) {
   byte pattern = digitBits[value];
   if (bitRead(pattern, 7)) drawSeg(sA);
@@ -98,6 +201,67 @@ void Digit::Draw(byte value) {
   if (bitRead(pattern, 2)) drawSeg(sF);
   if (bitRead(pattern, 1)) drawSeg(sG);
   _value = value;
+}
+
+void Digit::Flip(byte newValue)
+{
+  const int topMin = segHeight + 2;
+  const int topMax = segHeight * 2 + 2;
+  const int bottomMin = 0;
+  const int bottomMax = segHeight;
+  const int flipDelay = max(8, animSpeed / 2);
+
+  for (int i = 0; i <= segHeight; i++) {
+    Clear();
+    DrawClipped(_value, bottomMin, bottomMax, _color);
+    DrawClipped(_value, topMin + i, topMax, _color);
+    drawLine(0, segHeight + 1, segWidth + 1, segHeight + 1, _color);
+    delay(flipDelay);
+  }
+
+  for (int i = segHeight; i >= 0; i--) {
+    Clear();
+    DrawClipped(_value, bottomMin, bottomMax, _color);
+    DrawClipped(newValue, topMin + i, topMax, _color);
+    drawLine(0, segHeight + 1, segWidth + 1, segHeight + 1, _color);
+    delay(flipDelay);
+  }
+
+  for (int i = 0; i <= segHeight; i++) {
+    Clear();
+    DrawClipped(newValue, topMin, topMax, _color);
+    DrawClipped(_value, bottomMin, bottomMax - i, _color);
+    drawLine(0, segHeight + 1, segWidth + 1, segHeight + 1, _color);
+    delay(flipDelay);
+  }
+
+  for (int i = segHeight; i >= 0; i--) {
+    Clear();
+    DrawClipped(newValue, topMin, topMax, _color);
+    DrawClipped(newValue, bottomMin, bottomMax - i, _color);
+    drawLine(0, segHeight + 1, segWidth + 1, segHeight + 1, _color);
+    delay(flipDelay);
+  }
+
+  Clear();
+  Draw(newValue);
+}
+
+void Digit::Roll(byte newValue)
+{
+  const int digitHeight = segHeight * 2 + 2;
+  const int travel = digitHeight + 2;
+  const int rollDelay = max(8, animSpeed / 2);
+
+  for (int i = 0; i <= travel; i++) {
+    Clear();
+    DrawShiftedClipped(_value, -i, 0, digitHeight, _color);
+    DrawShiftedClipped(newValue, travel - i, 0, digitHeight, _color);
+    delay(rollDelay);
+  }
+
+  Clear();
+  Draw(newValue);
 }
 
 void Digit::Morph2() {
@@ -286,6 +450,21 @@ void Digit::Morph1() {
 }
 
 void Digit::Morph(byte newValue) {
+  Morph(newValue, DIGIT_ANIMATION_MORPH);
+}
+
+void Digit::Morph(byte newValue, byte animationMode) {
+  if (animationMode == DIGIT_ANIMATION_FLIP) {
+    Flip(newValue);
+    _value = newValue;
+    return;
+  }
+  if (animationMode == DIGIT_ANIMATION_ROLL) {
+    Roll(newValue);
+    _value = newValue;
+    return;
+  }
+
   switch (newValue) {
     case 2: Morph2(); break;
     case 3: Morph3(); break;

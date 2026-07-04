@@ -96,6 +96,7 @@ const byte row2 = 2+2*10;
 //=== SEGMENTS ===
 int cin = 25; //color intensity
 #include "Digit.h"
+byte digit_anim = DIGIT_ANIMATION_ODOMETER;
 Digit digit0(&display, 0, 63 - 1 - 9*1, 8, display.color565(0, 0, 255));
 Digit digit1(&display, 0, 63 - 1 - 9*2, 8, display.color565(0, 0, 255));
 Digit digit2(&display, 0, 63 - 4 - 9*3, 8, display.color565(0, 0, 255));
@@ -134,6 +135,21 @@ void display_updater ()
   display.display (70);
 }
 #endif
+
+void animateDigit (Digit *digit, byte newValue, bool carryDelay)
+{
+  if (newValue == digit->Value ())
+    return;
+
+  if (digit_anim == DIGIT_ANIMATION_ODOMETER)
+  {
+    if (carryDelay)
+      delay (70);
+    digit->Morph (newValue, DIGIT_ANIMATION_ROLL);
+  }
+  else
+    digit->Morph (newValue, digit_anim);
+}
 
 void getWeather ();
 char ap_mode = 0;
@@ -1511,6 +1527,30 @@ void web_server ()
         ntpsync = 1; //force full redraw
       }
     }
+    else if (httprq.indexOf ("GET /animation/morph ") != -1)
+    {
+      digit_anim = DIGIT_ANIMATION_MORPH;
+      httprsp += "<strong>animation: morph</strong><br>";
+      debug_println (">animation: morph");
+    }
+    else if (httprq.indexOf ("GET /animation/flip ") != -1)
+    {
+      digit_anim = DIGIT_ANIMATION_FLIP;
+      httprsp += "<strong>animation: flip</strong><br>";
+      debug_println (">animation: flip");
+    }
+    else if (httprq.indexOf ("GET /animation/roll ") != -1)
+    {
+      digit_anim = DIGIT_ANIMATION_ROLL;
+      httprsp += "<strong>animation: roll</strong><br>";
+      debug_println (">animation: roll");
+    }
+    else if (httprq.indexOf ("GET /animation/odometer ") != -1)
+    {
+      digit_anim = DIGIT_ANIMATION_ODOMETER;
+      httprsp += "<strong>animation: odometer</strong><br>";
+      debug_println (">animation: odometer");
+    }
     else if ((pidx = httprq.indexOf ("GET /timezone/")) != -1)
     {
       int pidx2 = httprq.indexOf (" ", pidx + 14);
@@ -1545,6 +1585,11 @@ void web_server ()
     httprsp += "<a href='/brightness/100'>brightness 100</a><br>";
     httprsp += "<a href='/brightness/200'>brightness 200</a><br>";
     httprsp += "use /brightness/x for display brightness 'x' from 0 (darkest) to 255 (brightest)<br>";
+    httprsp += "<br>digit animation<br>";
+    httprsp += "<a href='/animation/morph'>animation morph</a><br>";
+    httprsp += "<a href='/animation/flip'>animation flip</a><br>";
+    httprsp += "<a href='/animation/roll'>animation roll</a><br>";
+    httprsp += "<a href='/animation/odometer'>animation odometer</a><br>";
     //openweathermap.org
     httprsp += "<br>openweathermap.org API key<br>";
     httprsp += "<form action='/owm/'>" \
@@ -1846,13 +1891,22 @@ void loop ()
   }
   else
   {
+    bool carryAnimated = false;
     //seconds
     if (ss != prevss) 
     {
       int s0 = ss % 10;
       int s1 = ss / 10;
-      if (s0 != digit0.Value ()) digit0.Morph (s0);
-      if (s1 != digit1.Value ()) digit1.Morph (s1);
+      if (s0 != digit0.Value ())
+      {
+        animateDigit (&digit0, s0, false);
+        carryAnimated = true;
+      }
+      if (s1 != digit1.Value ())
+      {
+        animateDigit (&digit1, s1, carryAnimated);
+        carryAnimated = true;
+      }
       //ntpClient.PrintTime();
       prevss = ss;
       //refresh weather twice an hour based on random minute
@@ -1867,8 +1921,16 @@ void loop ()
     {
       int m0 = mm % 10;
       int m1 = mm / 10;
-      if (m0 != digit2.Value ()) digit2.Morph (m0);
-      if (m1 != digit3.Value ()) digit3.Morph (m1);
+      if (m0 != digit2.Value ())
+      {
+        animateDigit (&digit2, m0, carryAnimated);
+        carryAnimated = true;
+      }
+      if (m1 != digit3.Value ())
+      {
+        animateDigit (&digit3, m1, carryAnimated);
+        carryAnimated = true;
+      }
       prevmm = mm;
       //
 #define SHOW_SOME_LOVE
@@ -1897,8 +1959,16 @@ void loop ()
       //
       int h0 = hh % 10;
       int h1 = hh / 10;
-      if (h0 != digit4.Value ()) digit4.Morph (h0);
-      if (h1 != digit5.Value ()) digit5.Morph (h1);
+      if (h0 != digit4.Value ())
+      {
+        animateDigit (&digit4, h0, carryAnimated);
+        carryAnimated = true;
+      }
+      if (h1 != digit5.Value ())
+      {
+        animateDigit (&digit5, h1, carryAnimated);
+        carryAnimated = true;
+      }
     }//hh changed
   }
   //set NTP sync interval as needed

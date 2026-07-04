@@ -5,12 +5,18 @@
 
 #include <PxMatrix.h> // https://github.com/2dom/PxMatrix
 
+#define DIGIT_ANIMATION_MORPH 0
+#define DIGIT_ANIMATION_FLIP  1
+#define DIGIT_ANIMATION_ROLL  2
+#define DIGIT_ANIMATION_ODOMETER 3
+
 class Digit {
   
   public:
     Digit(PxMATRIX* d, byte value, uint16_t xo, uint16_t yo, uint16_t color);
     void Draw(byte value);
     void Morph(byte newValue);
+    void Morph(byte newValue, byte animationMode);
     byte Value();
     void DrawColon(uint16_t c);
     void SetColor(uint16_t c);
@@ -27,6 +33,13 @@ class Digit {
     void drawFillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t c);
     void drawLine(uint16_t x, uint16_t y, uint16_t x2, uint16_t y2, uint16_t c);
     void drawSeg(byte seg);
+    void drawSegClipped(byte seg, int yMin, int yMax, uint16_t c);
+    void DrawClipped(byte value, int yMin, int yMax, uint16_t c);
+    void drawSegShiftedClipped(byte seg, int yOffset, int yMin, int yMax, uint16_t c);
+    void DrawShiftedClipped(byte value, int yOffset, int yMin, int yMax, uint16_t c);
+    void Clear();
+    void Flip(byte newValue);
+    void Roll(byte newValue);
     void Morph2();
     void Morph3();
     void Morph4();

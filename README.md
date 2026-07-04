@@ -64,5 +64,25 @@ by git so local credentials are not committed.
 
 The PlatformIO board id for Arduino IDE's `NodeMCU 1.0 (ESP-12E Module)` is
 `nodemcuv2`.
+
+The PlatformIO build also applies a small compatibility patch to PxMatrix
+`v1.6.0` before compiling. That library version accidentally enables double
+buffering through preprocessor guards even when the sketch does not request it;
+without the patch, drawing can happen into the hidden buffer and the panel stays
+black.
+
+Runtime display controls:
+
+```text
+http://[esp-ip]/animation/morph
+http://[esp-ip]/animation/flip
+http://[esp-ip]/animation/roll
+http://[esp-ip]/animation/odometer
+```
+
+The flip mode is a split-flap style digit animation. The roll mode scrolls
+digits vertically like a small mechanical tumbler wheel. The odometer mode uses
+roll with delayed carry cascades across seconds, minutes, and hours. The
+animation selection is kept in RAM and resets to morph mode after reboot.
 <br>
 provided 'AS IS', use at your own risk
