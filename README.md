@@ -47,5 +47,22 @@ use /timezone/x for specific timezone 'x'
 <br>
 <br>
 tested ONLY using the NodeMCU variant listed as NodeMCU 1.0 (ESP-12E Module) in Arduino Studio
+
+## PlatformIO
+
+This project now includes a PlatformIO configuration for the same board:
+
+```sh
+pio run -e nodemcuv2
+pio run -e nodemcuv2 -t upload
+pio device monitor -b 115200
+```
+
+Before building, copy `params.h.example` to `params.h` and edit your WiFi,
+timezone, OpenWeatherMap API key, and location settings. `params.h` is ignored
+by git so local credentials are not committed.
+
+The PlatformIO board id for Arduino IDE's `NodeMCU 1.0 (ESP-12E Module)` is
+`nodemcuv2`.
 <br>
 provided 'AS IS', use at your own risk

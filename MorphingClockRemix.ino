@@ -32,8 +32,8 @@ PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 #define debug_printf(...) \
             do { if (DEBUG) Serial.printf(__VA_ARGS__); } while (0)
 
+#include <Arduino.h>
 #include <TimeLib.h>
-#include <NtpClientLib.h>
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>
 #include <ESP8266httpUpdate.h>
@@ -46,6 +46,7 @@ PxMatrix 1.6.0 by Dominic Buchstaler https://github.com/2dom/PxMatrix
 #define USE_FIREWORKS     //1% mem use
 
 #include "FS.h"
+#include <NtpClientLib.h>
 
 #ifdef ESP8266
 #include <Ticker.h>
@@ -70,7 +71,7 @@ byte prevhh = 0;
 byte prevmm = 0;
 byte prevss = 0;
 long tnow;
-unsigned char dbri = 255;
+unsigned char dbri = 64;
 #define FIREWORKS_DISPLAY 10//sec
 #define FIREWORKS_LOOP    50//ms
 WiFiClient httpcli;
@@ -230,7 +231,7 @@ int vars_write ()
 }
 //
 void setup ()
-{	
+{
 	Serial.begin (115200);
   while (!Serial)
     delay (500); //delay for Leonardo
@@ -241,6 +242,7 @@ void setup ()
   display_ticker.attach (0.002, display_updater);
   debug_println ("ticker attached");
 #endif
+  display.setBrightness (dbri);
   //read variables
   int cstore = 0;
   if (SPIFFS.begin ())
